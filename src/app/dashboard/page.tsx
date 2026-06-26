@@ -19,6 +19,11 @@ import SectionHeader from "@/components/widgets/SectionHeader"
 import ConsoleControls from "@/components/dashboard/ConsoleControls"
 import { EmptyState } from "@/components/dashboard/LoadingStates"
 import { Profile, UserSettings } from "@/types/database"
+import { MarketDataProvider } from "@/lib/market/MarketDataProvider"
+import SessionCard from "@/components/widgets/SessionCard"
+import MarketMiniTicker from "@/components/widgets/MarketMiniTicker"
+import TradingStatusCard from "@/components/news/TradingStatusCard"
+import NewsCountdown from "@/components/news/NewsCountdown"
 
 export const dynamic = "force-dynamic"
 
@@ -195,6 +200,20 @@ export default async function DashboardHome() {
         />
       </div>
 
+      {/* Phase 6: Live Market Ticker Bar */}
+      <MarketDataProvider>
+        <div className="glass-panel rounded-xl border border-white/[0.04] bg-slate-950/20 p-3 space-y-2">
+          <div className="flex items-center gap-2 justify-between">
+            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Live Market Feed</p>
+            <div className="flex items-center gap-3">
+              <TradingStatusCard events={economicEvents} />
+              <NewsCountdown events={economicEvents} />
+            </div>
+          </div>
+          <MarketMiniTicker />
+        </div>
+      </MarketDataProvider>
+
       {/* Grid: Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard
@@ -311,6 +330,9 @@ export default async function DashboardHome() {
           
           {/* Quick Actions Console Panel */}
           <ConsoleControls initialSettings={settings} />
+
+          {/* Session & Market Status */}
+          <SessionCard />
 
           {/* Account status */}
           <InfoCard 

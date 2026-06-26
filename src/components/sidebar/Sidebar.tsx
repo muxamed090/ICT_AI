@@ -15,7 +15,9 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  X
+  X,
+  BarChart2,
+  Calendar
 } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 
@@ -37,11 +39,13 @@ export default function Sidebar({
 
   const menuItems = [
     { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
-    { label: "Markets", href: "/dashboard/markets", icon: <TrendingUp className="h-4 w-4" /> },
+    { label: "Market Overview", href: "/dashboard/market-overview", icon: <BarChart2 className="h-4 w-4" /> },
+    { label: "Watchlist", href: "/dashboard/watchlist", icon: <Star className="h-4 w-4" /> },
+    { label: "Economic Calendar", href: "/dashboard/economic-calendar", icon: <Calendar className="h-4 w-4" /> },
     { label: "Signals", href: "/dashboard/signals", icon: <Zap className="h-4 w-4" /> },
     { label: "AI Analysis", href: "/dashboard/ai-analysis", icon: <Cpu className="h-4 w-4" /> },
-    { label: "Watchlist", href: "/dashboard/watchlist", icon: <Star className="h-4 w-4" /> },
     { label: "Journal", href: "/dashboard/journal", icon: <BookOpen className="h-4 w-4" /> },
+    { label: "Markets", href: "/dashboard/markets", icon: <TrendingUp className="h-4 w-4" /> },
   ]
 
   const bottomItems = [
