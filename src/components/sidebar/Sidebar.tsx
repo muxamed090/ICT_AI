@@ -5,7 +5,6 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { 
   LayoutDashboard, 
-  TrendingUp, 
   Zap, 
   Cpu, 
   Star, 
@@ -45,7 +44,6 @@ export default function Sidebar({
     { label: "Signals", href: "/dashboard/signals", icon: <Zap className="h-4 w-4" /> },
     { label: "AI Analysis", href: "/dashboard/ai-analysis", icon: <Cpu className="h-4 w-4" /> },
     { label: "Journal", href: "/dashboard/journal", icon: <BookOpen className="h-4 w-4" /> },
-    { label: "Markets", href: "/dashboard/markets", icon: <TrendingUp className="h-4 w-4" /> },
   ]
 
   const bottomItems = [

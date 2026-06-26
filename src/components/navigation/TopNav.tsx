@@ -2,8 +2,9 @@
 
 import React from "react"
 import Link from "next/link"
-import { Menu, Search, Bell, Cpu } from "lucide-react"
+import { Menu, Search, Cpu } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
+import NotificationsDropdown from "@/components/dashboard/NotificationsDropdown"
 
 interface TopNavProps {
   isSidebarCollapsed: boolean
@@ -65,14 +66,7 @@ export default function TopNav({
         </button>
 
         {/* Notifications */}
-        <button className="relative text-slate-400 hover:text-white p-1.5 rounded-md hover:bg-white/[0.03]">
-          <span className="sr-only">View notifications</span>
-          <Bell className="h-4.5 w-4.5" />
-          <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-          </span>
-        </button>
+        <NotificationsDropdown />
 
         {/* User Profile initials */}
         <Link href="/dashboard/profile" className="flex items-center gap-2 group">

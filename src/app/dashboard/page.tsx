@@ -19,6 +19,7 @@ import SectionHeader from "@/components/widgets/SectionHeader"
 import ConsoleControls from "@/components/dashboard/ConsoleControls"
 import { EmptyState } from "@/components/dashboard/LoadingStates"
 import { Profile, UserSettings } from "@/types/database"
+import { computeJournalStats } from "@/lib/services/JournalStatsService"
 import { MarketDataProvider } from "@/lib/market/MarketDataProvider"
 import SessionCard from "@/components/widgets/SessionCard"
 import MarketMiniTicker from "@/components/widgets/MarketMiniTicker"
@@ -118,19 +119,10 @@ export default async function DashboardHome() {
   const economicEvents = await economicRepo.getAll()
   const aiAnalysis = await aiRepo.getAll(user.id)
 
-  // 4. Calculate Winning Metrics & Performance
+  // 4. Calculate Winning Metrics & Performance (via stats service)
+  const journalStats = computeJournalStats(trades)
+  const balance = 50000 + journalStats.netPnl
   const activePositions = trades.filter(t => t.result === "pending")
-  const completedTrades = trades.filter(t => t.result !== "pending")
-  const wins = completedTrades.filter(t => t.result === "win")
-  const losses = completedTrades.filter(t => t.result === "loss")
-  const totalFinished = completedTrades.length
-  
-  const winRate = totalFinished > 0 ? (wins.length / totalFinished) * 100 : 0
-  const netPnl = trades.reduce((acc, t) => acc + Number(t.pnl || 0), 0)
-  const balance = 50000 + netPnl
-  const grossProfit = wins.reduce((acc, t) => acc + Number(t.pnl || 0), 0)
-  const grossLoss = losses.reduce((acc, t) => acc + Math.abs(Number(t.pnl || 0)), 0)
-  const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit
 
   // Calculate Today's metrics
   const todayStart = new Date()
@@ -149,8 +141,8 @@ export default async function DashboardHome() {
 
   const journalSummary = [
     { label: "Total Trades Today", value: todayCount.toString(), highlight: false },
-    { label: "Winning Rate", value: `${winRate.toFixed(1)}%`, highlight: true },
-    { label: "Profit Factor", value: profitFactor.toFixed(2), highlight: false },
+    { label: "Winning Rate", value: `${journalStats.winRate.toFixed(1)}%`, highlight: true },
+    { label: "Profit Factor", value: journalStats.profitFactor.toFixed(2), highlight: false },
     { label: "Net PnL Today", value: `${todayPnl >= 0 ? "+" : "-"}$${Math.abs(todayPnl).toFixed(2)}`, highlight: true },
   ]
 
