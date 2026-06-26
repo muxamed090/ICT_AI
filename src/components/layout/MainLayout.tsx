@@ -1,4 +1,7 @@
+"use client"
+
 import React from "react"
+import { usePathname } from "next/navigation"
 import Header from "./Header"
 import Footer from "./Footer"
 
@@ -7,6 +10,13 @@ interface MainLayoutProps {
 }
 
 export default function MainLayout({ children }: MainLayoutProps) {
+  const pathname = usePathname()
+  const isDashboard = pathname?.startsWith('/dashboard')
+
+  if (isDashboard) {
+    return <>{children}</>
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-[#0B1220] text-slate-100 selection:bg-blue-500/30 selection:text-white">
       {/* Navigation Header */}
