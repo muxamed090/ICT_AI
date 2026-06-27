@@ -1,9 +1,9 @@
-﻿-- =============================================================
+-- =============================================================
 -- Phase 11: Backtesting Engine -- Database Migration
 -- =============================================================
 
 -- 1. Backtest Runs Table -- immutable versioned performance snapshots
-CREATE TABLE IF NOT EXISTS backtest_runs (
+CREATE TABLE IF NOT EXISTS public.backtest_runs (
   id                      UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id                 UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name                    TEXT        NOT NULL DEFAULT 'Backtest Run',
@@ -37,23 +37,23 @@ CREATE TABLE IF NOT EXISTS backtest_runs (
   created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS backtest_runs_user_id ON backtest_runs(user_id);
-CREATE INDEX IF NOT EXISTS backtest_runs_created_at ON backtest_runs(user_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS backtest_runs_ml_mode ON backtest_runs(user_id, ml_mode);
+CREATE INDEX IF NOT EXISTS backtest_runs_user_id ON public.backtest_runs(user_id);
+CREATE INDEX IF NOT EXISTS backtest_runs_created_at ON public.backtest_runs(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS backtest_runs_ml_mode ON public.backtest_runs(user_id, ml_mode);
 
-ALTER TABLE backtest_runs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.backtest_runs ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users manage own backtest runs"
-  ON backtest_runs FOR ALL
+  ON public.backtest_runs FOR ALL
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
 -- 2. Backtest Trades Table -- detailed per-trade replay history
-CREATE TABLE IF NOT EXISTS backtest_trades (
+CREATE TABLE IF NOT EXISTS public.backtest_trades (
   id                 UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  backtest_run_id    UUID        NOT NULL REFERENCES backtest_runs(id) ON DELETE CASCADE,
+  backtest_run_id    UUID        NOT NULL REFERENCES public.backtest_runs(id) ON DELETE CASCADE,
   user_id            UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  journal_id         UUID        REFERENCES trade_journal(id) ON DELETE SET NULL,
+  journal_id         UUID        REFERENCES public.trade_journal(id) ON DELETE SET NULL,
   pair               TEXT        NOT NULL,
   direction          TEXT        NOT NULL,
   session            TEXT        NOT NULL,
@@ -78,12 +78,12 @@ CREATE TABLE IF NOT EXISTS backtest_trades (
   created_at         TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS backtest_trades_run_id ON backtest_trades(backtest_run_id);
-CREATE INDEX IF NOT EXISTS backtest_trades_user_id ON backtest_trades(user_id);
+CREATE INDEX IF NOT EXISTS backtest_trades_run_id ON public.backtest_trades(backtest_run_id);
+CREATE INDEX IF NOT EXISTS backtest_trades_user_id ON public.backtest_trades(user_id);
 
-ALTER TABLE backtest_trades ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.backtest_trades ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users manage own backtest trades"
-  ON backtest_trades FOR ALL
+  ON public.backtest_trades FOR ALL
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
