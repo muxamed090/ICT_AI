@@ -93,7 +93,11 @@ export default async function DashboardHome() {
         risk_percent: 1.00,
         ai_learning_enabled: true,
         ml_mode: "rules_only",
-        signal_threshold: 7.00
+        signal_threshold: 7.00,
+        max_spread_allowed: 3.00,
+        daily_drawdown_limit: 5.00,
+        news_buffer_minutes: 30,
+        risk_profile: 'balanced'
       })
     }
   } catch (err) {
@@ -110,6 +114,10 @@ export default async function DashboardHome() {
       ai_learning_enabled: true,
       ml_mode: "rules_only",
       signal_threshold: 7.00,
+      max_spread_allowed: 3.00,
+      daily_drawdown_limit: 5.00,
+      news_buffer_minutes: 30,
+      risk_profile: 'balanced',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }

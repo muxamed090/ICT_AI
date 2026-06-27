@@ -20,6 +20,10 @@ export const userSettingsSchema = z.object({
   ai_learning_enabled: z.boolean(),
   ml_mode: z.enum(['rules_only', 'hybrid', 'ml_priority']),
   signal_threshold: z.number().min(0.0).max(10.0),
+  max_spread_allowed: z.number().min(0.0).max(100.0),
+  daily_drawdown_limit: z.number().min(0.0).max(100.0),
+  news_buffer_minutes: z.number().int().nonnegative(),
+  risk_profile: z.enum(['conservative', 'balanced', 'aggressive']),
 })
 
 // 2a. ICT Rules Validator

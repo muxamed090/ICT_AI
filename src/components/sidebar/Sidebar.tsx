@@ -17,7 +17,8 @@ import {
   X,
   BarChart2,
   Calendar,
-  Sliders
+  Sliders,
+  Brain
 } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 
@@ -45,6 +46,7 @@ export default function Sidebar({
     { label: "Signals", href: "/dashboard/signals", icon: <Zap className="h-4 w-4" /> },
     { label: "AI Analysis", href: "/dashboard/ai-analysis", icon: <Cpu className="h-4 w-4" /> },
     { label: "Rules Engine", href: "/dashboard/rules", icon: <Sliders className="h-4 w-4" /> },
+    { label: "Decision Engine", href: "/dashboard/decision-engine", icon: <Brain className="h-4 w-4" /> },
     { label: "Journal", href: "/dashboard/journal", icon: <BookOpen className="h-4 w-4" /> },
   ]
 

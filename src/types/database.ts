@@ -44,6 +44,10 @@ export interface UserSettings {
   ai_learning_enabled: boolean
   ml_mode: MlMode
   signal_threshold: number
+  max_spread_allowed: number
+  daily_drawdown_limit: number
+  news_buffer_minutes: number
+  risk_profile: 'conservative' | 'balanced' | 'aggressive'
   created_at: string
   updated_at: string
 }
@@ -182,7 +186,7 @@ export interface Database {
       }
       user_settings: {
         Row: UserSettings
-        Insert: Omit<UserSettings, 'created_at' | 'updated_at' | 'signal_threshold'> & Partial<Pick<UserSettings, 'theme' | 'timezone' | 'language' | 'notification_enabled' | 'telegram_enabled' | 'risk_percent' | 'ai_learning_enabled' | 'ml_mode' | 'signal_threshold' | 'created_at' | 'updated_at'>>
+        Insert: Omit<UserSettings, 'created_at' | 'updated_at' | 'signal_threshold' | 'max_spread_allowed' | 'daily_drawdown_limit' | 'news_buffer_minutes' | 'risk_profile'> & Partial<Pick<UserSettings, 'theme' | 'timezone' | 'language' | 'notification_enabled' | 'telegram_enabled' | 'risk_percent' | 'ai_learning_enabled' | 'ml_mode' | 'signal_threshold' | 'max_spread_allowed' | 'daily_drawdown_limit' | 'news_buffer_minutes' | 'risk_profile' | 'created_at' | 'updated_at'>>
         Update: Partial<UserSettings>
       }
       watchlist: {
@@ -229,6 +233,11 @@ export interface Database {
         Row: IctRule
         Insert: Omit<IctRule, 'id' | 'created_at' | 'updated_at'> & Partial<Pick<IctRule, 'id' | 'weight' | 'enabled' | 'conditions' | 'version' | 'is_default' | 'created_at' | 'updated_at'>>
         Update: Partial<IctRule>
+      }
+      ai_decisions: {
+        Row: AiDecision
+        Insert: Omit<AiDecision, 'id' | 'created_at'> & Partial<Pick<AiDecision, 'id' | 'model_version' | 'created_at'>>
+        Update: Partial<AiDecision>
       }
     }
   }
@@ -289,4 +298,51 @@ export interface EngineResult {
   triggeredRules: RuleResult[]
   explanation: string
   recommendation: 'WAIT' | 'WATCH' | 'ENTRY'
+}
+
+export type DecisionType = 'ENTRY' | 'WATCH' | 'WAIT' | 'IGNORE'
+
+export interface RiskEvaluation {
+  isSpreadOk: boolean
+  isNewsSafe: boolean
+  isDrawdownOk: boolean
+  activeDrawdown: number
+  collidingNewsEvent: string | null
+}
+
+export interface PositionCalculation {
+  lotSize: number
+  riskAmountUsd: number
+  entryPrice: number
+  stopLossPrice: number
+  tp1: number
+  tp2: number
+  stopLossPips: number
+}
+
+export interface TradingCost {
+  spreadCost: number
+  commission: number
+  totalCost: number
+}
+
+export interface DecisionResult {
+  decision: DecisionType
+  confluenceScore: number
+  confidence: number
+  marketBias: MarketBias
+  riskEvaluation: RiskEvaluation
+  positionCalculation: PositionCalculation | null
+  tradingCost: TradingCost
+  reasons: string[]
+  decisionTrace: string[]
+}
+
+export interface AiDecision {
+  id: string
+  user_id: string
+  snapshot: Record<string, unknown>
+  decision_result: Record<string, unknown>
+  model_version: string
+  created_at: string
 }

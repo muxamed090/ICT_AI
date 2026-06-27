@@ -24,6 +24,10 @@ export default function SettingsForm({ settings }: SettingsFormProps) {
   const [aiLearning, setAiLearning] = useState(settings.ai_learning_enabled)
   const [mlMode, setMlMode] = useState(settings.ml_mode)
   const [signalThreshold, setSignalThreshold] = useState(String(settings.signal_threshold ?? 7.00))
+  const [maxSpreadAllowed, setMaxSpreadAllowed] = useState(String(settings.max_spread_allowed ?? 3.00))
+  const [dailyDrawdownLimit, setDailyDrawdownLimit] = useState(String(settings.daily_drawdown_limit ?? 5.00))
+  const [newsBufferMinutes, setNewsBufferMinutes] = useState(String(settings.news_buffer_minutes ?? 30))
+  const [riskProfile, setRiskProfile] = useState<UserSettings['risk_profile']>(settings.risk_profile ?? 'balanced')
   const [notifEnabled, setNotifEnabled] = useState(settings.notification_enabled)
   const [telegramEnabled, setTelegramEnabled] = useState(settings.telegram_enabled)
   const [telegramChatId, setTelegramChatId] = useState(settings.telegram_chat_id ?? '')
@@ -46,6 +50,10 @@ export default function SettingsForm({ settings }: SettingsFormProps) {
         ai_learning_enabled: aiLearning,
         ml_mode: mlMode,
         signal_threshold: parseFloat(signalThreshold) || 7.00,
+        max_spread_allowed: parseFloat(maxSpreadAllowed) || 3.00,
+        daily_drawdown_limit: parseFloat(dailyDrawdownLimit) || 5.00,
+        news_buffer_minutes: parseInt(newsBufferMinutes) || 30,
+        risk_profile: riskProfile
       })
 
       if (result.success) {
@@ -87,20 +95,79 @@ export default function SettingsForm({ settings }: SettingsFormProps) {
 
       {/* Risk Management */}
       <div className={sectionClass}>
-        <p className="text-xs font-bold text-white">Risk Management</p>
+        <p className="text-xs font-bold text-white">Risk Management & Boundaries</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="space-y-1.5">
+            <label className={labelClass}>Risk Per Trade (%)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0.01"
+              max="100"
+              value={riskPercent}
+              onChange={(e) => setRiskPercent(e.target.value)}
+              className={inputClass}
+              placeholder="1.00"
+            />
+            <p className="text-[9px] text-slate-600">Base percentage of account equity risked per entry.</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={labelClass}>Risk Profile</label>
+            <select
+              value={riskProfile}
+              onChange={(e) => setRiskProfile(e.target.value as UserSettings['risk_profile'])}
+              className={inputClass}
+            >
+              <option value="conservative">Conservative (0.5x Risk)</option>
+              <option value="balanced">Balanced (1.0x Risk)</option>
+              <option value="aggressive">Aggressive (1.5x Risk)</option>
+            </select>
+            <p className="text-[9px] text-slate-600">Scales the position sizing calculator multipliers.</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={labelClass}>Max Spread Allowed (Pips)</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0.0"
+              value={maxSpreadAllowed}
+              onChange={(e) => setMaxSpreadAllowed(e.target.value)}
+              className={inputClass}
+              placeholder="3.0"
+            />
+            <p className="text-[9px] text-slate-600">Maximum spread allowed before entry is locked.</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={labelClass}>Daily Drawdown Limit (%)</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0.1"
+              max="100.0"
+              value={dailyDrawdownLimit}
+              onChange={(e) => setDailyDrawdownLimit(e.target.value)}
+              className={inputClass}
+              placeholder="5.0"
+            />
+            <p className="text-[9px] text-slate-600">Daily account equity loss protection lockout.</p>
+          </div>
+        </div>
+
         <div className="space-y-1.5 max-w-xs">
-          <label className={labelClass}>Risk Per Trade (%)</label>
+          <label className={labelClass}>News Lockout Buffer (Minutes)</label>
           <input
             type="number"
-            step="0.01"
-            min="0.01"
-            max="100"
-            value={riskPercent}
-            onChange={(e) => setRiskPercent(e.target.value)}
+            step="1"
+            min="0"
+            value={newsBufferMinutes}
+            onChange={(e) => setNewsBufferMinutes(e.target.value)}
             className={inputClass}
-            placeholder="1.00"
+            placeholder="30"
           />
-          <p className="text-[9px] text-slate-600">Percentage of account equity risked per trade entry.</p>
+          <p className="text-[9px] text-slate-600">Lock trading before & after high-impact events.</p>
         </div>
       </div>
 
