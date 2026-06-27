@@ -24,6 +24,9 @@ const mockSettings: UserSettings = {
   daily_drawdown_limit: 5.0,
   news_buffer_minutes: 30,
   risk_profile: 'balanced',
+  ml_confidence_weight: 0.30,
+  ml_min_training_samples: 10,
+  ml_auto_retrain: true,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString()
 }

@@ -24,6 +24,9 @@ export const userSettingsSchema = z.object({
   daily_drawdown_limit: z.number().min(0.0).max(100.0),
   news_buffer_minutes: z.number().int().nonnegative(),
   risk_profile: z.enum(['conservative', 'balanced', 'aggressive']),
+  ml_confidence_weight: z.number().min(0.0).max(1.0),
+  ml_min_training_samples: z.number().int().min(1).max(1000),
+  ml_auto_retrain: z.boolean(),
 })
 
 // 2a. ICT Rules Validator
@@ -130,4 +133,17 @@ export const economicEventSchema = z.object({
   forecast: z.string().nullable().optional(),
   previous: z.string().nullable().optional(),
   actual: z.string().nullable().optional(),
+})
+
+// 9. ML Training Input Validator
+export const mlTrainingInputSchema = z.object({
+  mlMode: z.enum(['rules_only', 'hybrid', 'ml_priority']),
+  minSamples: z.number().int().min(1),
+})
+
+// 10. ML Outcome Linking Validator
+export const mlOutcomeLinkSchema = z.object({
+  mlPredictionId: z.string().uuid(),
+  actualOutcome: z.enum(['win', 'loss', 'breakeven']),
+  isCorrect: z.boolean(),
 })

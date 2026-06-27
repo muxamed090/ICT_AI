@@ -1,20 +1,30 @@
-import { 
-  MarketSnapshot, 
-  IctRule, 
-  UserSettings, 
-  EconomicEvent, 
-  DecisionResult, 
-  DecisionType 
+import {
+  MarketSnapshot,
+  IctRule,
+  UserSettings,
+  EconomicEvent,
+  DecisionType,
+  MlModelRegistry,
+  HybridDecisionResult,
 } from '@/types/database'
 import { IctRulesEngine } from './IctRulesEngine'
 import { TradingCostEngine } from './TradingCostEngine'
 import { RiskManagementEngine } from './RiskManagementEngine'
 import { PositionSizeCalculator } from './PositionSizeCalculator'
+import { MlFeatureExtractor } from './MlFeatureExtractor'
+import { MlInferenceEngine } from './MlInferenceEngine'
 
 export class AiDecisionEngine {
   /**
-   * Evaluates market conditions to calculate trade confluences, lot sizing, expected costs, 
-   * and validates risk filters, producing a final trade execution recommendation.
+   * Evaluates market conditions, calculates trade confluences, lot sizing,
+   * expected costs, and validates risk filters.
+   *
+   * When an active MlModelRegistry is provided and ml_mode !== 'rules_only',
+   * the ML Inference Engine adjusts the confluence score and may override
+   * the recommendation (ml_priority mode).
+   *
+   * Returns a HybridDecisionResult which extends DecisionResult — all existing
+   * consumers continue to work without modification.
    */
   static evaluate(
     snapshot: MarketSnapshot,
@@ -22,22 +32,22 @@ export class AiDecisionEngine {
     settings: UserSettings,
     events: EconomicEvent[],
     accountBalance: number,
-    activeDrawdown: number = 0.0
-  ): DecisionResult {
+    activeDrawdown: number = 0.0,
+    activeModel: MlModelRegistry | null = null
+  ): HybridDecisionResult {
     const trace: string[] = []
     const reasons: string[] = []
 
     trace.push(`[Start] Evaluated snapshot for pair: ${snapshot.pair}`)
 
-    // 1. Evaluate rules to calculate confluence score
-    trace.push(`[Step 1/4] Running Rules Engine evaluation...`)
+    // ── Step 1/5: ICT Rules Engine ──────────────────────────────────────────
+    trace.push(`[Step 1/5] Running Rules Engine evaluation...`)
     const rulesResult = IctRulesEngine.evaluate(snapshot, rules, settings.signal_threshold)
-    trace.push(`Rules Engine outputs - Confluence: ${rulesResult.confluenceScore}/10.0, Bias: ${rulesResult.marketBias}`)
+    trace.push(`Rules Engine: Confluence ${rulesResult.confluenceScore}/10.0, Bias: ${rulesResult.marketBias}`)
 
-    // 2. Compute Position Size Metrics
-    trace.push(`[Step 2/4] Calculating position sizing metrics...`)
+    // ── Step 2/5: Position Sizing ───────────────────────────────────────────
+    trace.push(`[Step 2/5] Calculating position sizing metrics...`)
     const isBiasTradable = rulesResult.marketBias !== 'neutral'
-    
     const positionCalculation = isBiasTradable
       ? PositionSizeCalculator.calculate(
           snapshot.pair,
@@ -49,23 +59,23 @@ export class AiDecisionEngine {
       : null
 
     if (positionCalculation) {
-      trace.push(`Position Calculated - Lots: ${positionCalculation.lotSize}, Risk USD: $${positionCalculation.riskAmountUsd}`)
+      trace.push(`Position: Lots ${positionCalculation.lotSize}, Risk $${positionCalculation.riskAmountUsd}`)
     } else {
-      trace.push(`Position sizing skipped - bias is neutral.`)
+      trace.push(`Position sizing skipped — bias is neutral.`)
     }
 
-    // 3. Expected Trading Costs calculation
-    trace.push(`[Step 3/4] Estimating broker execution costs...`)
+    // ── Step 3/5: Trading Costs ─────────────────────────────────────────────
+    trace.push(`[Step 3/5] Estimating broker execution costs...`)
     const lotSizeForCosts = positionCalculation?.lotSize ?? 0.1
     const tradingCost = TradingCostEngine.calculateExpectedExecutionCost(
       snapshot.pair,
       snapshot.spread,
       lotSizeForCosts
     )
-    trace.push(`Trading Costs calculated - Total: $${tradingCost.totalCost} (Spread: $${tradingCost.spreadCost}, Comm: $${tradingCost.commission})`)
+    trace.push(`Trading Costs: $${tradingCost.totalCost} (Spread: $${tradingCost.spreadCost}, Comm: $${tradingCost.commission})`)
 
-    // 4. Validate Risk boundaries filters
-    trace.push(`[Step 4/4] Evaluating risk boundaries filters...`)
+    // ── Step 4/5: Risk Validation ───────────────────────────────────────────
+    trace.push(`[Step 4/5] Evaluating risk boundary filters...`)
     const currentTime = new Date().toISOString()
     const riskEvaluation = RiskManagementEngine.evaluateRisk(
       snapshot.spread,
@@ -77,54 +87,88 @@ export class AiDecisionEngine {
       settings.daily_drawdown_limit
     )
 
-    // Build trace validation outputs
     if (riskEvaluation.isSpreadOk) {
-      trace.push(`Spread Filter: PASSED (Spread: ${snapshot.spread} pips <= Limit: ${settings.max_spread_allowed} pips)`)
+      trace.push(`Spread Filter: PASSED (${snapshot.spread} pips <= ${settings.max_spread_allowed} pips)`)
     } else {
-      trace.push(`Spread Filter: FAILED (Spread: ${snapshot.spread} pips > Limit: ${settings.max_spread_allowed} pips)`)
+      trace.push(`Spread Filter: FAILED (${snapshot.spread} pips > ${settings.max_spread_allowed} pips)`)
       reasons.push(`Spread is too wide (${snapshot.spread} pips)`)
     }
-
     if (riskEvaluation.isNewsSafe) {
-      trace.push(`News Buffer Filter: PASSED (No high-impact economic events within buffer window)`)
+      trace.push(`News Buffer Filter: PASSED`)
     } else {
-      trace.push(`News Buffer Filter: FAILED (Collision with event: ${riskEvaluation.collidingNewsEvent})`)
+      trace.push(`News Buffer Filter: FAILED (event: ${riskEvaluation.collidingNewsEvent})`)
       reasons.push(`High-impact news event collision: ${riskEvaluation.collidingNewsEvent}`)
     }
-
     if (riskEvaluation.isDrawdownOk) {
-      trace.push(`Drawdown Filter: PASSED (Current Drawdown: ${activeDrawdown}% <= Limit: ${settings.daily_drawdown_limit}%)`)
+      trace.push(`Drawdown Filter: PASSED (${activeDrawdown}% <= ${settings.daily_drawdown_limit}%)`)
     } else {
-      trace.push(`Drawdown Filter: FAILED (Current Drawdown: ${activeDrawdown}% > Limit: ${settings.daily_drawdown_limit}%)`)
+      trace.push(`Drawdown Filter: FAILED (${activeDrawdown}% > ${settings.daily_drawdown_limit}%)`)
       reasons.push(`Daily drawdown limit exceeded (${activeDrawdown}%)`)
     }
 
-    // 5. Decision state coordination
-    const isRiskSafe = riskEvaluation.isSpreadOk && riskEvaluation.isNewsSafe && riskEvaluation.isDrawdownOk
-    let decision: DecisionType = 'IGNORE'
+    // ── Step 5/5: ML Inference ──────────────────────────────────────────────
+    trace.push(`[Step 5/5] Running ML Inference Engine...`)
+    let mlInference = null
+    let finalScore = rulesResult.confluenceScore
 
-    if (rulesResult.confluenceScore < 4.00) {
-      decision = 'IGNORE'
-      reasons.push('Confluence score is below baseline trade criteria.')
-    } else if (rulesResult.confluenceScore < settings.signal_threshold) {
-      if (isRiskSafe && isBiasTradable) {
-        decision = 'WATCH'
-        reasons.push('Confluence is moderate. Monitor structure for extra confirmations.')
+    if (activeModel && settings.ml_mode !== 'rules_only') {
+      const featureVector = MlFeatureExtractor.extract(snapshot, rulesResult)
+      mlInference = MlInferenceEngine.infer(featureVector, activeModel, settings)
+
+      if (mlInference) {
+        finalScore = Number(
+          Math.min(10, Math.max(0, rulesResult.confluenceScore + mlInference.confidenceBoost)).toFixed(2)
+        )
+        for (const t of mlInference.inferenceTrace) {
+          trace.push(t)
+        }
+        trace.push(`[ML] Final combined score: ${finalScore.toFixed(2)} (ICT: ${rulesResult.confluenceScore} + ML Boost: ${mlInference.confidenceBoost})`)
       } else {
-        decision = 'WAIT'
-        reasons.push('Confluence is moderate, and execution is blocked by risk parameters.')
+        trace.push(`[ML] Inference skipped (insufficient samples or rules_only mode).`)
       }
     } else {
-      // High confluence
-      if (isRiskSafe && isBiasTradable) {
-        decision = 'ENTRY'
-        reasons.push('Strong confluence and all risk validation rules passed.')
-      } else {
-        decision = 'WAIT'
-        if (!isBiasTradable) {
-          reasons.push('Confluence is high but directional bias remains neutral.')
+      trace.push(`[ML] Skipped — ml_mode is rules_only or no active model found.`)
+    }
+
+    // ── Decision Coordination ───────────────────────────────────────────────
+    const isRiskSafe =
+      riskEvaluation.isSpreadOk && riskEvaluation.isNewsSafe && riskEvaluation.isDrawdownOk
+    let decision: DecisionType = 'IGNORE'
+
+    // In ml_priority mode with high-confidence ML, use ML recommendation
+    if (
+      settings.ml_mode === 'ml_priority' &&
+      mlInference !== null &&
+      mlInference.mlConfidence >= settings.signal_threshold * 10 &&
+      isRiskSafe
+    ) {
+      decision = mlInference.mlRecommendation as DecisionType
+      reasons.push(`ML Priority mode — high ML confidence (${mlInference.mlConfidence.toFixed(0)}%) overrides ICT rules.`)
+      trace.push(`[Decision] ML Priority override applied: ${decision}`)
+    } else {
+      // Standard decision using finalScore (which includes ML boost in hybrid mode)
+      if (finalScore < 4.0) {
+        decision = 'IGNORE'
+        reasons.push('Confluence score is below baseline trade criteria.')
+      } else if (finalScore < settings.signal_threshold) {
+        if (isRiskSafe && isBiasTradable) {
+          decision = 'WATCH'
+          reasons.push('Confluence is moderate. Monitor structure for additional confirmations.')
         } else {
-          reasons.push('Strong confluence, but execution is locked by risk boundary failures.')
+          decision = 'WAIT'
+          reasons.push('Confluence is moderate, and execution is blocked by risk parameters.')
+        }
+      } else {
+        if (isRiskSafe && isBiasTradable) {
+          decision = 'ENTRY'
+          reasons.push('Strong confluence and all risk validation rules passed.')
+        } else {
+          decision = 'WAIT'
+          if (!isBiasTradable) {
+            reasons.push('Confluence is high but directional bias remains neutral.')
+          } else {
+            reasons.push('Strong confluence, but execution is locked by risk boundary failures.')
+          }
         }
       }
     }
@@ -140,7 +184,11 @@ export class AiDecisionEngine {
       positionCalculation,
       tradingCost,
       reasons,
-      decisionTrace: trace
+      decisionTrace: trace,
+      // ML extensions
+      mlInference,
+      finalScore,
+      mlModelVersion: mlInference?.appliedModelVersion ?? 'ICT-AI-v1',
     }
   }
 }

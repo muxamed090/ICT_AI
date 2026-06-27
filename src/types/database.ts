@@ -48,6 +48,9 @@ export interface UserSettings {
   daily_drawdown_limit: number
   news_buffer_minutes: number
   risk_profile: 'conservative' | 'balanced' | 'aggressive'
+  ml_confidence_weight: number
+  ml_min_training_samples: number
+  ml_auto_retrain: boolean
   created_at: string
   updated_at: string
 }
@@ -239,6 +242,16 @@ export interface Database {
         Insert: Omit<AiDecision, 'id' | 'created_at'> & Partial<Pick<AiDecision, 'id' | 'model_version' | 'created_at'>>
         Update: Partial<AiDecision>
       }
+      ml_model_registry: {
+        Row: MlModelRegistry
+        Insert: Omit<MlModelRegistry, 'id' | 'created_at' | 'trained_at'> & Partial<Pick<MlModelRegistry, 'id' | 'is_active' | 'trained_at' | 'created_at'>>
+        Update: Partial<MlModelRegistry>
+      }
+      ml_predictions: {
+        Row: MlPrediction
+        Insert: Omit<MlPrediction, 'id' | 'created_at' | 'actual_outcome' | 'is_correct' | 'outcome_linked_at'> & Partial<Pick<MlPrediction, 'id' | 'actual_outcome' | 'is_correct' | 'outcome_linked_at' | 'created_at'>>
+        Update: Partial<MlPrediction>
+      }
     }
   }
 }
@@ -345,4 +358,120 @@ export interface AiDecision {
   decision_result: Record<string, unknown>
   model_version: string
   created_at: string
+}
+
+// ==================================================
+// Phase 10 — Machine Learning Engine Types
+// ==================================================
+
+export type MlRecommendation = 'ENTRY' | 'WATCH' | 'WAIT' | 'IGNORE'
+
+/** Versioned, immutable ML model snapshot stored in ml_model_registry */
+export interface MlModelRegistry {
+  id: string
+  user_id: string
+  model_version: string
+  ml_mode: MlMode
+  rule_weights: Record<string, unknown>
+  pattern_stats: Record<string, unknown>
+  training_samples: number
+  accuracy_rate: number
+  avg_confidence: number
+  is_active: boolean
+  trained_at: string
+  created_at: string
+}
+
+/** One ML inference recorded per ai_decision; outcome linked back later */
+export interface MlPrediction {
+  id: string
+  user_id: string
+  ai_decision_id: string | null
+  model_version: string
+  pair: string
+  timeframe: string
+  session: string
+  ml_score: number
+  ml_confidence: number
+  ml_bias: MarketBias
+  ml_recommendation: MlRecommendation
+  feature_vector: Record<string, unknown>
+  actual_outcome: string | null
+  is_correct: boolean | null
+  outcome_linked_at: string | null
+  created_at: string
+}
+
+/** Normalized feature vector passed to the ML Inference Engine */
+export interface MlFeatureVector {
+  pair: string
+  timeframe: string
+  session: TradingSession
+  killzone: IctKillzone
+  htf_bias: MarketBias
+  trend: 'bullish' | 'bearish' | 'ranging'
+  bos: boolean
+  choch: boolean
+  fvg_type: FvgType
+  ote: boolean
+  liquidity_sweep: 'high' | 'low' | 'none'
+  volume: 'high' | 'average' | 'low'
+  spread: number
+  ict_confluence_score: number
+  ict_confidence: number
+  triggered_rule_count: number
+  total_rule_count: number
+}
+
+/** Per-rule accuracy weight produced by FeatureWeightCalibrator */
+export interface RuleAccuracyWeight {
+  ruleKey: string
+  totalSamples: number
+  correctSamples: number
+  accuracyRate: number
+  calibratedWeight: number
+}
+
+/** Per-pair/session accuracy statistics from PatternAccuracyTracker */
+export interface PatternStat {
+  pair: string
+  session: string
+  totalPredictions: number
+  correctPredictions: number
+  accuracyRate: number
+  avgMlScore: number
+}
+
+/** Output of MlInferenceEngine — consumed by AiDecisionEngine */
+export interface MlInferenceResult {
+  mlScore: number
+  mlConfidence: number
+  mlBias: MarketBias
+  mlRecommendation: MlRecommendation
+  confidenceBoost: number
+  appliedModelVersion: string
+  inferenceTrace: string[]
+}
+
+/** Extended DecisionResult with ML layer output */
+export interface HybridDecisionResult extends DecisionResult {
+  mlInference: MlInferenceResult | null
+  finalScore: number
+  mlModelVersion: string
+}
+
+/** Input payload for training action */
+export interface MlTrainingInput {
+  mlMode: MlMode
+  minSamples: number
+}
+
+/** Summary output of a completed ML training cycle */
+export interface MlTrainingResult {
+  modelVersion: string
+  trainingSamples: number
+  accuracyRate: number
+  ruleWeights: RuleAccuracyWeight[]
+  patternStats: PatternStat[]
+  durationMs: number
 }

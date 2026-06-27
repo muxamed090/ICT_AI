@@ -28,6 +28,13 @@ export default async function SettingsPage() {
       ai_learning_enabled: true,
       ml_mode: 'rules_only',
       signal_threshold: 7.00,
+      max_spread_allowed: 3.00,
+      daily_drawdown_limit: 5.00,
+      news_buffer_minutes: 30,
+      risk_profile: 'balanced',
+      ml_confidence_weight: 0.30,
+      ml_min_training_samples: 10,
+      ml_auto_retrain: true,
     })
   }
 

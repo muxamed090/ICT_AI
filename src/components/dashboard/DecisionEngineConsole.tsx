@@ -15,7 +15,7 @@ import {
 import { 
   UserSettings, 
   MarketSnapshot, 
-  DecisionResult, 
+  HybridDecisionResult, 
   AiDecision,
   TradingSession,
   IctKillzone,
@@ -47,7 +47,7 @@ export default function DecisionEngineConsole({
   const [decisions, setDecisions] = useState<AiDecision[]>(initialDecisions)
   const [accountBalance, setAccountBalance] = useState<number>(100000)
   const [activeDrawdown, setActiveDrawdown] = useState<number>(0.0)
-  const [decisionResult, setDecisionResult] = useState<DecisionResult | null>(null)
+  const [decisionResult, setDecisionResult] = useState<HybridDecisionResult | null>(null)
   
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [isSimulating, startSimulating] = useTransition()
