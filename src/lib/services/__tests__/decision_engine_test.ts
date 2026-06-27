@@ -27,6 +27,14 @@ const mockSettings: UserSettings = {
   ml_confidence_weight: 0.30,
   ml_min_training_samples: 10,
   ml_auto_retrain: true,
+  decision_mode: 'hybrid',
+  execution_mode: 'confirmation_required',
+  trading_environment: 'paper_trading',
+  max_trades_per_day: 10,
+  enabled_sessions: ['london', 'new_york_am', 'new_york_pm'],
+  global_paused: false,
+  emergency_stop: false,
+  max_slippage_pips: 2.0,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString()
 }

@@ -27,6 +27,14 @@ export const userSettingsSchema = z.object({
   ml_confidence_weight: z.number().min(0.0).max(1.0),
   ml_min_training_samples: z.number().int().min(1).max(1000),
   ml_auto_retrain: z.boolean(),
+  decision_mode: z.enum(['rules_only', 'hybrid', 'ml_priority']),
+  execution_mode: z.enum(['manual', 'confirmation_required', 'fully_automatic']),
+  trading_environment: z.enum(['paper_trading', 'demo_broker', 'live_broker']),
+  max_trades_per_day: z.number().int().min(1).max(100),
+  enabled_sessions: z.array(z.string()),
+  global_paused: z.boolean(),
+  emergency_stop: z.boolean(),
+  max_slippage_pips: z.number().min(0.1).max(10.0),
 })
 
 // 2a. ICT Rules Validator
@@ -167,4 +175,27 @@ export const backtestConfigSchema = z.object({
 export const compareRunsSchema = z.object({
   runIds: z.array(z.string().uuid()).min(2).max(5),
 })
+
+// 13. Broker Account Credentials Validator
+export const brokerAccountSchema = z.object({
+  broker_type: z.enum(['mt4', 'mt5', 'ctrader', 'binance']),
+  account_name: z.string().min(1).max(50),
+  account_number: z.string().min(1).max(50),
+  server_or_environment: z.string().min(1).max(100),
+  credentials: z.record(z.string(), z.string()),
+  is_demo: z.boolean().default(true),
+})
+
+// 14. Order Execution Intent Validator
+export const orderExecutionSchema = z.object({
+  broker_account_id: z.string().uuid(),
+  ai_decision_id: z.string().uuid().optional(),
+  pair: z.string().min(1),
+  direction: z.enum(['buy', 'sell']),
+  lot_size: z.number().positive(),
+  requested_price: z.number().positive(),
+  stop_loss: z.number().positive(),
+  take_profit: z.number().positive(),
+})
+
 

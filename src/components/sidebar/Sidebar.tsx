@@ -19,7 +19,9 @@ import {
   Calendar,
   Sliders,
   Brain,
-  FlaskConical
+  FlaskConical,
+  Radio,
+  Activity
 } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 
@@ -49,6 +51,8 @@ export default function Sidebar({
     { label: "Rules Engine", href: "/dashboard/rules", icon: <Sliders className="h-4 w-4" /> },
     { label: "Decision Engine", href: "/dashboard/decision-engine", icon: <Brain className="h-4 w-4" /> },
     { label: "Backtesting", href: "/dashboard/backtesting", icon: <FlaskConical className="h-4 w-4" /> },
+    { label: "Live Trading", href: "/dashboard/live-trading", icon: <Radio className="h-4 w-4" /> },
+    { label: "System Monitor", href: "/dashboard/system-monitor", icon: <Activity className="h-4 w-4" /> },
     { label: "Journal", href: "/dashboard/journal", icon: <BookOpen className="h-4 w-4" /> },
   ]
 

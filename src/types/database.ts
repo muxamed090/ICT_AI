@@ -51,6 +51,14 @@ export interface UserSettings {
   ml_confidence_weight: number
   ml_min_training_samples: number
   ml_auto_retrain: boolean
+  decision_mode: DecisionPlatformMode
+  execution_mode: ExecutionPlatformMode
+  trading_environment: TradingEnvironment
+  max_trades_per_day: number
+  enabled_sessions: string[]
+  global_paused: boolean
+  emergency_stop: boolean
+  max_slippage_pips: number
   created_at: string
   updated_at: string
 }
@@ -189,7 +197,7 @@ export interface Database {
       }
       user_settings: {
         Row: UserSettings
-        Insert: Omit<UserSettings, 'created_at' | 'updated_at' | 'signal_threshold' | 'max_spread_allowed' | 'daily_drawdown_limit' | 'news_buffer_minutes' | 'risk_profile'> & Partial<Pick<UserSettings, 'theme' | 'timezone' | 'language' | 'notification_enabled' | 'telegram_enabled' | 'risk_percent' | 'ai_learning_enabled' | 'ml_mode' | 'signal_threshold' | 'max_spread_allowed' | 'daily_drawdown_limit' | 'news_buffer_minutes' | 'risk_profile' | 'created_at' | 'updated_at'>>
+        Insert: Pick<UserSettings, 'id'> & Partial<Omit<UserSettings, 'id'>>
         Update: Partial<UserSettings>
       }
       watchlist: {
@@ -261,6 +269,31 @@ export interface Database {
         Row: BacktestTrade
         Insert: Omit<BacktestTrade, 'id' | 'created_at'> & Partial<Pick<BacktestTrade, 'id' | 'journal_id' | 'ict_score' | 'ml_score' | 'final_score' | 'ai_decision' | 'ai_confidence' | 'created_at'>>
         Update: Partial<BacktestTrade>
+      }
+      broker_accounts: {
+        Row: BrokerAccount
+        Insert: Omit<BrokerAccount, 'id' | 'is_demo' | 'is_active' | 'balance' | 'equity' | 'margin_used' | 'free_margin' | 'connection_status' | 'last_ping_at' | 'created_at' | 'updated_at'> & Partial<Pick<BrokerAccount, 'id' | 'is_demo' | 'is_active' | 'balance' | 'equity' | 'margin_used' | 'free_margin' | 'connection_status' | 'last_ping_at' | 'created_at' | 'updated_at'>>
+        Update: Partial<BrokerAccount>
+      }
+      trade_queue: {
+        Row: TradeQueueItem
+        Insert: Omit<TradeQueueItem, 'id' | 'status' | 'retry_count' | 'max_retries' | 'last_error' | 'created_at' | 'updated_at'> & Partial<Pick<TradeQueueItem, 'id' | 'status' | 'retry_count' | 'max_retries' | 'last_error' | 'created_at' | 'updated_at'>>
+        Update: Partial<TradeQueueItem>
+      }
+      broker_orders: {
+        Row: BrokerOrder
+        Insert: Omit<BrokerOrder, 'id' | 'broker_ticket' | 'executed_price' | 'trading_environment' | 'status' | 'rejection_reason' | 'execution_latency_ms' | 'executed_at' | 'created_at'> & Partial<Pick<BrokerOrder, 'id' | 'broker_ticket' | 'executed_price' | 'trading_environment' | 'status' | 'rejection_reason' | 'execution_latency_ms' | 'executed_at' | 'created_at'>>
+        Update: Partial<BrokerOrder>
+      }
+      broker_positions: {
+        Row: BrokerPosition
+        Insert: Omit<BrokerPosition, 'id' | 'swap' | 'commission' | 'trading_environment' | 'opened_at' | 'updated_at'> & Partial<Pick<BrokerPosition, 'id' | 'swap' | 'commission' | 'trading_environment' | 'opened_at' | 'updated_at'>>
+        Update: Partial<BrokerPosition>
+      }
+      broker_logs: {
+        Row: BrokerLog
+        Insert: Omit<BrokerLog, 'id' | 'broker_account_id' | 'log_level' | 'created_at'> & Partial<Pick<BrokerLog, 'id' | 'broker_account_id' | 'log_level' | 'created_at'>>
+        Update: Partial<BrokerLog>
       }
     }
   }
@@ -755,3 +788,132 @@ export interface BacktestReport {
   generatedAt: string
   durationMs: number
 }
+
+// ==================================================
+// Phase 12 — Production & Live Trading Types
+// ==================================================
+
+export type DecisionPlatformMode = 'rules_only' | 'hybrid' | 'ml_priority'
+export type ExecutionPlatformMode = 'manual' | 'confirmation_required' | 'fully_automatic'
+export type TradingEnvironment = 'paper_trading' | 'demo_broker' | 'live_broker'
+export type QueueOrderStatus = 'queued' | 'validating' | 'sending' | 'executed' | 'failed'
+export type BrokerType = 'mt4' | 'mt5' | 'ctrader' | 'binance'
+export type BrokerConnectionStatus = 'connected' | 'disconnected' | 'error'
+export type BrokerOrderStatus = 'pending' | 'submitted' | 'filled' | 'rejected' | 'cancelled'
+
+export interface BrokerAccount {
+  id: string
+  user_id: string
+  broker_type: BrokerType
+  account_name: string
+  account_number: string
+  server_or_environment: string
+  encrypted_credentials: string
+  is_demo: boolean
+  is_active: boolean
+  balance: number
+  equity: number
+  margin_used: number
+  free_margin: number
+  connection_status: BrokerConnectionStatus
+  last_ping_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface TradeQueueItem {
+  id: string
+  user_id: string
+  broker_account_id: string | null
+  ai_decision_id: string | null
+  pair: string
+  direction: OrderDirection
+  lot_size: number
+  requested_price: number
+  stop_loss: number
+  take_profit: number
+  status: QueueOrderStatus
+  retry_count: number
+  max_retries: number
+  last_error: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface BrokerOrder {
+  id: string
+  user_id: string
+  broker_account_id: string | null
+  ai_decision_id: string | null
+  broker_ticket: string | null
+  pair: string
+  direction: OrderDirection
+  lot_size: number
+  requested_price: number
+  executed_price: number | null
+  stop_loss: number
+  take_profit: number
+  trading_environment: TradingEnvironment
+  status: BrokerOrderStatus
+  rejection_reason: string | null
+  execution_latency_ms: number | null
+  executed_at: string | null
+  created_at: string
+}
+
+export interface BrokerPosition {
+  id: string
+  user_id: string
+  broker_account_id: string | null
+  broker_ticket: string
+  pair: string
+  direction: OrderDirection
+  lot_size: number
+  open_price: number
+  current_price: number
+  stop_loss: number
+  take_profit: number
+  unrealized_pnl: number
+  swap: number
+  commission: number
+  trading_environment: TradingEnvironment
+  opened_at?: string
+  updated_at?: string
+}
+
+export interface BrokerLog {
+  id: string
+  user_id: string
+  broker_account_id: string | null
+  log_level: 'info' | 'warn' | 'error' | 'security' | 'circuit_breaker'
+  category: 'execution' | 'risk' | 'connection' | 'system'
+  message: string
+  metadata: Record<string, unknown>
+  created_at: string
+}
+
+export interface BrokerHealthMetrics {
+  status: 'healthy' | 'degraded' | 'critical'
+  pingMs: number
+  apiLatencyMs: number
+  connectionQuality: number
+  rejectionRate: number
+  spreadSpikeDetected: boolean
+  lastCheckedAt: string
+}
+
+export interface AccountSummary {
+  balance: number
+  equity: number
+  marginUsed: number
+  freeMargin: number
+}
+
+export interface ExecutionReceipt {
+  success: boolean
+  ticket: string | null
+  executedPrice: number | null
+  rejectionReason: string | null
+  latencyMs: number
+}
+
