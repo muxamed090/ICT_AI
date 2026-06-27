@@ -23,6 +23,7 @@ export default function SettingsForm({ settings }: SettingsFormProps) {
   const [riskPercent, setRiskPercent] = useState(String(settings.risk_percent))
   const [aiLearning, setAiLearning] = useState(settings.ai_learning_enabled)
   const [mlMode, setMlMode] = useState(settings.ml_mode)
+  const [signalThreshold, setSignalThreshold] = useState(String(settings.signal_threshold ?? 7.00))
   const [notifEnabled, setNotifEnabled] = useState(settings.notification_enabled)
   const [telegramEnabled, setTelegramEnabled] = useState(settings.telegram_enabled)
   const [telegramChatId, setTelegramChatId] = useState(settings.telegram_chat_id ?? '')
@@ -44,6 +45,7 @@ export default function SettingsForm({ settings }: SettingsFormProps) {
         risk_percent: parseFloat(riskPercent) || 1.0,
         ai_learning_enabled: aiLearning,
         ml_mode: mlMode,
+        signal_threshold: parseFloat(signalThreshold) || 7.00,
       })
 
       if (result.success) {
@@ -105,7 +107,7 @@ export default function SettingsForm({ settings }: SettingsFormProps) {
       {/* AI Engine */}
       <div className={sectionClass}>
         <p className="text-xs font-bold text-white">AI Engine Configuration</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="space-y-2">
             <label className={labelClass}>AI Learning</label>
             <button type="button" onClick={() => setAiLearning(!aiLearning)}
@@ -123,6 +125,19 @@ export default function SettingsForm({ settings }: SettingsFormProps) {
             <select value={mlMode} onChange={(e) => setMlMode(e.target.value as typeof mlMode)} className={inputClass}>
               {ML_MODES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
             </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className={labelClass}>Signal Threshold (0-10)</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0.0"
+              max="10.0"
+              value={signalThreshold}
+              onChange={(e) => setSignalThreshold(e.target.value)}
+              className={inputClass}
+              placeholder="7.0"
+            />
           </div>
         </div>
       </div>

@@ -92,7 +92,8 @@ export default async function DashboardHome() {
         telegram_chat_id: null,
         risk_percent: 1.00,
         ai_learning_enabled: true,
-        ml_mode: "rules_only"
+        ml_mode: "rules_only",
+        signal_threshold: 7.00
       })
     }
   } catch (err) {
@@ -108,6 +109,7 @@ export default async function DashboardHome() {
       risk_percent: 1.00,
       ai_learning_enabled: true,
       ml_mode: "rules_only",
+      signal_threshold: 7.00,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }

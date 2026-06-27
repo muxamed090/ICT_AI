@@ -43,6 +43,7 @@ export interface UserSettings {
   risk_percent: number
   ai_learning_enabled: boolean
   ml_mode: MlMode
+  signal_threshold: number
   created_at: string
   updated_at: string
 }
@@ -181,7 +182,7 @@ export interface Database {
       }
       user_settings: {
         Row: UserSettings
-        Insert: Omit<UserSettings, 'created_at' | 'updated_at'> & Partial<Pick<UserSettings, 'theme' | 'timezone' | 'language' | 'notification_enabled' | 'telegram_enabled' | 'risk_percent' | 'ai_learning_enabled' | 'ml_mode' | 'created_at' | 'updated_at'>>
+        Insert: Omit<UserSettings, 'created_at' | 'updated_at' | 'signal_threshold'> & Partial<Pick<UserSettings, 'theme' | 'timezone' | 'language' | 'notification_enabled' | 'telegram_enabled' | 'risk_percent' | 'ai_learning_enabled' | 'ml_mode' | 'signal_threshold' | 'created_at' | 'updated_at'>>
         Update: Partial<UserSettings>
       }
       watchlist: {
@@ -224,6 +225,68 @@ export interface Database {
         Insert: Omit<AiLearningStats, 'id' | 'created_at' | 'updated_at'> & Partial<Pick<AiLearningStats, 'id' | 'total_predictions' | 'correct_predictions' | 'accuracy_rate' | 'avg_confidence' | 'learning_iterations' | 'last_trained_at' | 'created_at' | 'updated_at'>>
         Update: Partial<AiLearningStats>
       }
+      ict_rules: {
+        Row: IctRule
+        Insert: Omit<IctRule, 'id' | 'created_at' | 'updated_at'> & Partial<Pick<IctRule, 'id' | 'weight' | 'enabled' | 'conditions' | 'version' | 'is_default' | 'created_at' | 'updated_at'>>
+        Update: Partial<IctRule>
+      }
     }
   }
+}
+
+// ==================================================
+// ICT Rules Engine & Simulator Custom Types
+// ==================================================
+
+export type IctRuleCategory = 'structure' | 'entry' | 'liquidity' | 'timing' | 'trend' | 'risk'
+
+export interface IctRule {
+  id: string
+  user_id: string
+  rule_key: string
+  name: string
+  description: string
+  category: IctRuleCategory
+  weight: number
+  enabled: boolean
+  conditions: Record<string, unknown>
+  version: string
+  is_default: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface MarketSnapshot {
+  pair: string
+  timeframe: string
+  session: TradingSession
+  killzone: IctKillzone
+  trend: 'bullish' | 'bearish' | 'ranging'
+  bos: boolean
+  choch: boolean
+  fvg_type: FvgType
+  ote: boolean
+  liquidity_sweep: 'high' | 'low' | 'none'
+  htf_bias: MarketBias
+  volume: 'high' | 'average' | 'low'
+  spread: number
+}
+
+export interface RuleResult {
+  ruleKey: string
+  name: string
+  category: IctRuleCategory
+  weight: number
+  enabled: boolean
+  isTriggered: boolean
+  scoreContribution: number
+}
+
+export interface EngineResult {
+  confluenceScore: number
+  confidence: number
+  marketBias: 'bullish' | 'bearish' | 'neutral'
+  triggeredRules: RuleResult[]
+  explanation: string
+  recommendation: 'WAIT' | 'WATCH' | 'ENTRY'
 }

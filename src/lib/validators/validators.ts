@@ -19,6 +19,31 @@ export const userSettingsSchema = z.object({
   risk_percent: z.number().min(0.01).max(100.00),
   ai_learning_enabled: z.boolean(),
   ml_mode: z.enum(['rules_only', 'hybrid', 'ml_priority']),
+  signal_threshold: z.number().min(0.0).max(10.0),
+})
+
+// 2a. ICT Rules Validator
+export const ictRuleSchema = z.object({
+  weight: z.number().min(0.1).max(10.0),
+  enabled: z.boolean(),
+  conditions: z.record(z.string(), z.unknown()).optional(),
+})
+
+// 2b. Confluence Simulation Snapshot Validator
+export const marketSnapshotSchema = z.object({
+  pair: z.string().min(1, 'Trading pair is required'),
+  timeframe: z.string().min(1, 'Timeframe is required'),
+  session: z.enum(['asian', 'london', 'new_york_am', 'new_york_pm', 'london_close']),
+  killzone: z.enum(['asia', 'london', 'new_york', 'none']),
+  trend: z.enum(['bullish', 'bearish', 'ranging']),
+  bos: z.boolean(),
+  choch: z.boolean(),
+  fvg_type: z.enum(['bisi', 'sibi', 'none']),
+  ote: z.boolean(),
+  liquidity_sweep: z.enum(['high', 'low', 'none']),
+  htf_bias: z.enum(['bullish', 'bearish', 'neutral']),
+  volume: z.enum(['high', 'average', 'low']),
+  spread: z.number().nonnegative(),
 })
 
 // 3. Watchlist Validator

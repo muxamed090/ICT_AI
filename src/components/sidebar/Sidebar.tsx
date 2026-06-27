@@ -16,7 +16,8 @@ import {
   ChevronRight,
   X,
   BarChart2,
-  Calendar
+  Calendar,
+  Sliders
 } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 
@@ -43,6 +44,7 @@ export default function Sidebar({
     { label: "Economic Calendar", href: "/dashboard/economic-calendar", icon: <Calendar className="h-4 w-4" /> },
     { label: "Signals", href: "/dashboard/signals", icon: <Zap className="h-4 w-4" /> },
     { label: "AI Analysis", href: "/dashboard/ai-analysis", icon: <Cpu className="h-4 w-4" /> },
+    { label: "Rules Engine", href: "/dashboard/rules", icon: <Sliders className="h-4 w-4" /> },
     { label: "Journal", href: "/dashboard/journal", icon: <BookOpen className="h-4 w-4" /> },
   ]
 

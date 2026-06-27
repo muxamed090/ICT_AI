@@ -27,6 +27,7 @@ export default async function SettingsPage() {
       risk_percent: 1.0,
       ai_learning_enabled: true,
       ml_mode: 'rules_only',
+      signal_threshold: 7.00,
     })
   }
 
