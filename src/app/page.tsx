@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useState } from "react"
+import React from "react"
+import { useRouter } from "next/navigation"
 import { 
   TrendingUp, 
   ChevronRight, 
@@ -9,18 +10,20 @@ import {
   Layers, 
   Zap,
   Lock,
-  TrendingDown,
-  Info
+  TrendingDown
 } from "lucide-react"
+import { useAuth } from "@/hooks/useAuth"
 
 export default function Home() {
-  const [notification, setNotification] = useState<string | null>(null)
+  const router = useRouter()
+  const { user } = useAuth()
 
   const handleCTA = () => {
-    setNotification("Phase 1 Complete. Authentication & Engine connection will be established in Phase 2.")
-    setTimeout(() => {
-      setNotification(null)
-    }, 5000)
+    if (user) {
+      router.push("/dashboard")
+    } else {
+      router.push("/login")
+    }
   }
 
   const features = [
@@ -61,18 +64,6 @@ export default function Home() {
 
       {/* Main Hero Container */}
       <div className="mx-auto max-w-7xl px-4 pt-16 pb-24 sm:px-6 lg:px-8 lg:pt-24 lg:pb-32">
-        {/* Banner Alert */}
-        {notification && (
-          <div className="fixed top-20 right-4 z-50 max-w-md animate-in fade-in slide-in-from-top-4 duration-300">
-            <div className="rounded-lg bg-blue-950 border border-blue-500/30 p-4 shadow-xl flex gap-3 items-start">
-              <Info className="h-5 w-5 text-blue-400 shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-sm font-semibold text-white">Application Notice</h4>
-                <p className="text-xs text-slate-300 mt-1">{notification}</p>
-              </div>
-            </div>
-          </div>
-        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
           {/* Left Column: Text content */}

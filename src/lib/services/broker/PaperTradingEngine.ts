@@ -5,6 +5,7 @@ import {
   BrokerPosition,
   TradeQueueItem,
 } from '@/types/database'
+import { LiveTradingRepository } from '@/lib/repositories/LiveTradingRepository'
 
 export class PaperTradingEngine {
   /**
@@ -59,13 +60,15 @@ export class PaperTradingEngine {
       trading_environment: 'paper_trading',
     }
 
-    const { error } = await supabase.from('broker_positions').insert(position)
-    if (error) {
+    try {
+      const repo = new LiveTradingRepository(supabase)
+      await repo.createPosition(position)
+    } catch (error) {
       return {
         success: false,
         ticket: null,
         executedPrice: null,
-        rejectionReason: `Failed to open paper position: ${error.message}`,
+        rejectionReason: `Failed to open paper position: ${(error as Error).message}`,
         latencyMs: Date.now() - startTime,
       }
     }

@@ -3,11 +3,11 @@
  * Tests: SmartOrderRetry, EmergencyCircuitBreaker, TradeQueueEngine
  */
 
-// ── SmartOrderRetry Tests ─────────────────────────────────────────────────────
-
+import assert from 'assert'
 import { SmartOrderRetry } from '../broker/SmartOrderRetry'
 import { BrokerAdapter } from '../broker/BrokerAdapter'
 import { AccountSummary, BrokerPosition } from '@/types/database'
+import { EmergencyCircuitBreaker } from '../broker/EmergencyCircuitBreaker'
 
 const ORDER = {
   pair: 'EURUSD',
@@ -46,56 +46,58 @@ function makeMockAdapter(responses: Array<{ success: boolean; rejection?: string
   }
 }
 
-describe('SmartOrderRetry', () => {
-  it('returns success on first attempt', async () => {
+async function runTests() {
+  console.log('--- RUNNING PRODUCTION TRADING TESTS ---')
+
+  // SmartOrderRetry tests
+  {
     const adapter = makeMockAdapter([{ success: true }])
     const result = await SmartOrderRetry.execute(adapter, ORDER)
-    expect(result.success).toBe(true)
-    expect(result.attempts).toBe(1)
-    expect(result.errorCodes).toHaveLength(0)
-  })
+    assert.strictEqual(result.success, true)
+    assert.strictEqual(result.attempts, 1)
+    assert.strictEqual(result.errorCodes.length, 0)
+  }
 
-  it('retries on timeout and succeeds', async () => {
+  {
     const adapter = makeMockAdapter([
       { success: false, rejection: 'Connection Timeout' },
       { success: false, rejection: 'Network Error' },
       { success: true },
     ])
     const result = await SmartOrderRetry.execute(adapter, ORDER)
-    expect(result.success).toBe(true)
-    expect(result.attempts).toBe(3)
-    expect(result.errorCodes).toContain('TIMEOUT')
-  })
+    assert.strictEqual(result.success, true)
+    assert.strictEqual(result.attempts, 3)
+    assert.ok(result.errorCodes.includes('TIMEOUT'))
+  }
 
-  it('does NOT retry on non-retryable rejection', async () => {
+  {
     const adapter = makeMockAdapter([
       { success: false, rejection: 'Insufficient funds' },
-      { success: true }, // should never be called
+      { success: true },
     ])
     const result = await SmartOrderRetry.execute(adapter, ORDER)
-    expect(result.success).toBe(false)
-    expect(result.attempts).toBe(1)
-  })
+    assert.strictEqual(result.success, false)
+    assert.strictEqual(result.attempts, 1)
+  }
 
-  it('fails after max retries exhausted', async () => {
+  {
     const adapter = makeMockAdapter([
       { success: false, rejection: 'Requote' },
       { success: false, rejection: 'Requote' },
       { success: false, rejection: 'Requote' },
     ])
     const result = await SmartOrderRetry.execute(adapter, ORDER)
-    expect(result.success).toBe(false)
-    expect(result.attempts).toBe(3)
-    expect(result.errorCodes.every((c) => c === 'REQUOTE')).toBe(true)
-  })
+    assert.strictEqual(result.success, false)
+    assert.strictEqual(result.attempts, 3)
+    assert.ok(result.errorCodes.every((c) => c === 'REQUOTE'))
+  }
 
-  it('never changes lot_size or SL/TP between retries', async () => {
-    const capturedOrders: typeof ORDER[] = []
+  {
     const adapter = makeMockAdapter([
       { success: false, rejection: 'Timeout' },
       { success: true },
     ])
-    // Capture adapter calls via spy
+    const capturedOrders: Array<Parameters<typeof adapter.executeOrder>[0]> = []
     const originalExecute = adapter.executeOrder.bind(adapter)
     adapter.executeOrder = async (o) => {
       capturedOrders.push({ ...o })
@@ -103,67 +105,47 @@ describe('SmartOrderRetry', () => {
     }
     await SmartOrderRetry.execute(adapter, ORDER)
     capturedOrders.forEach((o) => {
-      expect(o.lot_size).toBe(ORDER.lot_size)
-      expect(o.stop_loss).toBe(ORDER.stop_loss)
-      expect(o.take_profit).toBe(ORDER.take_profit)
+      assert.strictEqual(o.lot_size, ORDER.lot_size)
+      assert.strictEqual(o.stop_loss, ORDER.stop_loss)
+      assert.strictEqual(o.take_profit, ORDER.take_profit)
     })
-  })
-})
+  }
 
-// ── EmergencyCircuitBreaker Tests ─────────────────────────────────────────────
+  // EmergencyCircuitBreaker tests
+  const mockSupabase = {
+    from: () => ({
+      insert: () => ({ select: () => ({ single: async () => ({ data: null, error: null }) }) }),
+    }),
+  } as unknown as Parameters<typeof EmergencyCircuitBreaker.recordFailure>[0]
 
-import { EmergencyCircuitBreaker } from '../broker/EmergencyCircuitBreaker'
-
-// Simple mock supabase for circuit breaker tests
-const mockSupabase = {
-  from: () => ({
-    insert: () => ({ select: () => ({ single: async () => ({ data: null, error: null }) }) }),
-  }),
-} as unknown as Parameters<typeof EmergencyCircuitBreaker.recordFailure>[0]
-
-describe('EmergencyCircuitBreaker', () => {
   const userId = 'test-user-circuit'
   const accountId = 'test-account-circuit'
 
-  beforeEach(() => {
-    EmergencyCircuitBreaker.recordSuccess(userId, accountId)
-  })
+  EmergencyCircuitBreaker.recordSuccess(userId, accountId)
+  assert.strictEqual(EmergencyCircuitBreaker.isClosed(userId, accountId), true)
 
-  it('starts as closed (safe)', () => {
-    expect(EmergencyCircuitBreaker.isClosed(userId, accountId)).toBe(true)
-  })
+  EmergencyCircuitBreaker.recordSuccess(userId, accountId)
+  assert.strictEqual(EmergencyCircuitBreaker.isClosed(userId, accountId), true)
 
-  it('records success and stays closed', () => {
-    EmergencyCircuitBreaker.recordSuccess(userId, accountId)
-    expect(EmergencyCircuitBreaker.isClosed(userId, accountId)).toBe(true)
-  })
+  for (let i = 0; i < 4; i++) {
+    await EmergencyCircuitBreaker.recordFailure(mockSupabase, userId, accountId, 'test error')
+  }
+  assert.strictEqual(EmergencyCircuitBreaker.isClosed(userId, accountId), true)
 
-  it('remains closed below failure threshold', async () => {
-    for (let i = 0; i < 4; i++) {
-      await EmergencyCircuitBreaker.recordFailure(mockSupabase, userId, accountId, 'test error')
-    }
-    expect(EmergencyCircuitBreaker.isClosed(userId, accountId)).toBe(true)
-  })
+  for (let i = 0; i < 5; i++) {
+    await EmergencyCircuitBreaker.recordFailure(mockSupabase, userId, accountId, 'test error')
+  }
+  assert.strictEqual(EmergencyCircuitBreaker.isClosed(userId, accountId), false)
 
-  it('trips open at threshold (5 failures)', async () => {
-    for (let i = 0; i < 5; i++) {
-      await EmergencyCircuitBreaker.recordFailure(mockSupabase, userId, accountId, 'test error')
-    }
-    expect(EmergencyCircuitBreaker.isClosed(userId, accountId)).toBe(false)
-  })
+  await EmergencyCircuitBreaker.manualReset(mockSupabase, userId, accountId)
+  assert.strictEqual(EmergencyCircuitBreaker.isClosed(userId, accountId), true)
 
-  it('manual reset closes the circuit', async () => {
-    for (let i = 0; i < 5; i++) {
-      await EmergencyCircuitBreaker.recordFailure(mockSupabase, userId, accountId, 'test error')
-    }
-    await EmergencyCircuitBreaker.manualReset(mockSupabase, userId, accountId)
-    expect(EmergencyCircuitBreaker.isClosed(userId, accountId)).toBe(true)
-  })
+  const state = EmergencyCircuitBreaker.getState(userId, accountId)
+  assert.ok('state' in state)
+  assert.ok('isSafe' in state)
+  assert.ok('consecutiveFailures' in state)
 
-  it('getState returns full metrics', async () => {
-    const state = EmergencyCircuitBreaker.getState(userId, accountId)
-    expect(state).toHaveProperty('state')
-    expect(state).toHaveProperty('isSafe')
-    expect(state).toHaveProperty('consecutiveFailures')
-  })
-})
+  console.log('✔ Production Trading tests passed cleanly.')
+}
+
+runTests().catch(console.error)

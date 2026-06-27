@@ -1,6 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { BrokerHealthMetrics, BrokerLog } from '@/types/database'
 import { BrokerAdapter } from './BrokerAdapter'
+import { LiveTradingRepository } from '@/lib/repositories/LiveTradingRepository'
 
 export class BrokerHealthMonitor {
   /**
@@ -27,13 +28,8 @@ export class BrokerHealthMonitor {
     }
 
     // Query last 20 execution logs to calculate rejection rates
-    const { data: logs } = await supabase
-      .from('broker_logs')
-      .select('*')
-      .eq('broker_account_id', accountId)
-      .eq('category', 'execution')
-      .order('created_at', { ascending: false })
-      .limit(20)
+    const repo = new LiveTradingRepository(supabase)
+    const logs = await repo.getLogsForAccountCategory(accountId, 'execution', 20)
 
     const brokerLogs = (logs || []) as unknown as BrokerLog[]
     const totalExecutions = brokerLogs.length

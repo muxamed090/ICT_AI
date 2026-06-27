@@ -1,4 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js'
+import { LiveTradingRepository } from '@/lib/repositories/LiveTradingRepository'
 
 export class AuditLogger {
   /**
@@ -22,7 +23,8 @@ export class AuditLogger {
         console.log(logStr, JSON.stringify(metadata))
       }
 
-      await supabase.from('broker_logs').insert({
+      const repo = new LiveTradingRepository(supabase)
+      await repo.createLog({
         user_id: userId,
         broker_account_id: accountId,
         log_level: logLevel,

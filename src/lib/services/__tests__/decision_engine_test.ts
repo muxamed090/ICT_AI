@@ -95,7 +95,7 @@ assert.strictEqual(RiskManagementEngine.checkSpread(3.5, 3.0), false)
 
 // News verification (15 minutes event time difference)
 const newsEvents: EconomicEvent[] = [
-  { id: 'e1', event_name: 'CPI Report', currency: 'USD', event_time: new Date(Date.now() + 15 * 60 * 1000).toISOString(), impact: 'high', actual: null, previous: null, forecast: null, created_at: '', updated_at: '' }
+  { id: 'e1', event_name: 'CPI Report', currency: 'USD', event_time: new Date(Date.now() + 15 * 60 * 1000).toISOString(), impact: 'high', actual: null, previous: null, forecast: null, created_at: '' }
 ]
 const newsCheck = RiskManagementEngine.checkNewsCollision(new Date().toISOString(), newsEvents, 30)
 assert.strictEqual(newsCheck.isSafe, false)

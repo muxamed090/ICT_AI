@@ -6,6 +6,7 @@ import { SmartOrderRetry } from './SmartOrderRetry'
 import { EmergencyCircuitBreaker } from './EmergencyCircuitBreaker'
 import { AuditLogger } from './AuditLogger'
 import { TradeQueueEngine } from './TradeQueueEngine'
+import { LiveTradingRepository } from '@/lib/repositories/LiveTradingRepository'
 
 interface ExecutionContext {
   supabase: SupabaseClient
@@ -28,6 +29,7 @@ export class OrderExecutionEngine {
     ctx: ExecutionContext
   ): Promise<ExecutionReceipt> {
     const { supabase, userId, environment, adapter, globalPaused, emergencyStop } = ctx
+    const liveRepo = new LiveTradingRepository(supabase)
 
     // ── Safety Gates ──────────────────────────────────────────
     if (globalPaused) {
@@ -51,13 +53,9 @@ export class OrderExecutionEngine {
     }
 
     // ── Daily Trade Limit Check ───────────────────────────────
-    const { count: todayCount } = await supabase
-      .from('broker_orders')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .gte('created_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString())
+    const todayCount = await liveRepo.getTodayOrderCount(userId)
 
-    if ((todayCount ?? 0) >= ctx.maxTradesPerDay) {
+    if (todayCount >= ctx.maxTradesPerDay) {
       await TradeQueueEngine.advanceStatus(supabase, item.id, 'failed', 'Daily trade limit reached')
       await AuditLogger.log(supabase, userId, 'risk', 'warn', 'Order rejected: daily limit', { todayCount, limit: ctx.maxTradesPerDay }, item.broker_account_id)
       return this.failedReceipt('Daily trade limit reached')
@@ -92,7 +90,7 @@ export class OrderExecutionEngine {
     }
 
     // ── Record Broker Order ───────────────────────────────────
-    await supabase.from('broker_orders').insert({
+    await liveRepo.createOrder({
       user_id: userId,
       broker_account_id: item.broker_account_id,
       ai_decision_id: item.ai_decision_id,
