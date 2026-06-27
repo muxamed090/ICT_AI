@@ -147,3 +147,24 @@ export const mlOutcomeLinkSchema = z.object({
   actualOutcome: z.enum(['win', 'loss', 'breakeven']),
   isCorrect: z.boolean(),
 })
+
+// 11. Backtest Configuration Validator
+export const backtestConfigSchema = z.object({
+  name: z.string().min(1).max(100),
+  description: z.string().max(500).default(''),
+  mlMode: z.enum(['rules_only', 'hybrid', 'ml_priority']),
+  dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  pairFilter: z.array(z.string()).default([]),
+  sessionFilter: z.array(
+    z.enum(['asian', 'london', 'new_york_am', 'new_york_pm', 'london_close'])
+  ).default([]),
+  initialEquity: z.number().positive().default(100000),
+  minSampleSize: z.number().int().min(1).default(20),
+})
+
+// 12. Strategy Comparison Validator
+export const compareRunsSchema = z.object({
+  runIds: z.array(z.string().uuid()).min(2).max(5),
+})
+

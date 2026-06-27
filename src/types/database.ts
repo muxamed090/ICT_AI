@@ -252,6 +252,16 @@ export interface Database {
         Insert: Omit<MlPrediction, 'id' | 'created_at' | 'actual_outcome' | 'is_correct' | 'outcome_linked_at'> & Partial<Pick<MlPrediction, 'id' | 'actual_outcome' | 'is_correct' | 'outcome_linked_at' | 'created_at'>>
         Update: Partial<MlPrediction>
       }
+      backtest_runs: {
+        Row: BacktestRun
+        Insert: Omit<BacktestRun, 'id' | 'created_at'> & Partial<Pick<BacktestRun, 'id' | 'description' | 'pair_filter' | 'session_filter' | 'sharpe_ratio' | 'created_at'>>
+        Update: Partial<BacktestRun>
+      }
+      backtest_trades: {
+        Row: BacktestTrade
+        Insert: Omit<BacktestTrade, 'id' | 'created_at'> & Partial<Pick<BacktestTrade, 'id' | 'journal_id' | 'ict_score' | 'ml_score' | 'final_score' | 'ai_decision' | 'ai_confidence' | 'created_at'>>
+        Update: Partial<BacktestTrade>
+      }
     }
   }
 }
@@ -473,5 +483,275 @@ export interface MlTrainingResult {
   accuracyRate: number
   ruleWeights: RuleAccuracyWeight[]
   patternStats: PatternStat[]
+  durationMs: number
+}
+
+// ==================================================
+// Phase 11 — Backtesting Engine Types
+// ==================================================
+
+export type BacktestStatus = 'running' | 'completed' | 'failed'
+
+export interface BacktestRun {
+  id: string
+  user_id: string
+  name: string
+  description: string | null
+  ml_mode: MlMode
+  model_version: string
+  rules_engine_version: string
+  decision_engine_version: string
+  ml_engine_version: string
+  date_from: string
+  date_to: string
+  pair_filter: string[] | null
+  session_filter: string[] | null
+  total_trades: number
+  winning_trades: number
+  losing_trades: number
+  breakeven_trades: number
+  win_rate: number
+  loss_rate: number
+  profit_factor: number
+  expectancy: number
+  avg_rr: number
+  net_pnl: number
+  gross_profit: number
+  gross_loss: number
+  max_drawdown: number
+  max_drawdown_pct: number
+  sharpe_ratio: number | null
+  report: Record<string, unknown>
+  status: BacktestStatus
+  created_at: string
+}
+
+export interface BacktestTrade {
+  id: string
+  backtest_run_id: string
+  user_id: string
+  journal_id: string | null
+  pair: string
+  direction: OrderDirection
+  session: TradingSession
+  killzone: IctKillzone
+  setup_type: string
+  timeframe: string
+  entry_price: number
+  stop_loss: number
+  take_profit: number
+  risk_reward: number
+  result: TradeResult
+  pnl: number
+  ict_score: number | null
+  ml_score: number | null
+  final_score: number | null
+  ai_decision: DecisionType | null
+  ai_confidence: number | null
+  running_equity: number
+  running_drawdown: number
+  trade_index: number
+  traded_at: string
+  created_at: string
+}
+
+export interface BacktestConfig {
+  name: string
+  description: string
+  mlMode: MlMode
+  dateFrom: string
+  dateTo: string
+  pairFilter: string[]
+  sessionFilter: TradingSession[]
+  initialEquity: number
+  minSampleSize: number
+}
+
+// Monte Carlo Analysis Types
+export interface MonteCarloSimulationRun {
+  runIndex: number
+  finalEquity: number
+  maxDrawdownPct: number
+  netPnl: number
+}
+
+export interface MonteCarloResult {
+  simulationsCount: number
+  worstDrawdownPct: number
+  bestEquity: number
+  medianReturn: number
+  averageReturn: number
+  probabilityOfProfit: number
+  runs: MonteCarloSimulationRun[]
+}
+
+// Walk-Forward Analysis Types
+export interface WalkForwardWindow {
+  windowIndex: number
+  trainFrom: string
+  trainTo: string
+  testFrom: string
+  testTo: string
+  inSampleWinRate: number
+  outOfSampleWinRate: number
+  efficiencyRatio: number
+}
+
+export interface WalkForwardResult {
+  totalWindows: number
+  avgEfficiencyRatio: number
+  robustnessScore: number
+  windows: WalkForwardWindow[]
+}
+
+// Strategy Comparison Types
+export interface StrategyComparisonItem {
+  runId: string
+  name: string
+  mlMode: MlMode
+  modelVersion: string
+  winRate: number
+  profitFactor: number
+  sharpeRatio: number | null
+  expectancy: number
+  maxDrawdownPct: number
+  netPnl: number
+  totalTrades: number
+}
+
+export interface StrategyComparisonResult {
+  items: StrategyComparisonItem[]
+}
+
+// Headline Performance & Report Types
+export interface EquityPoint {
+  tradeIndex: number
+  tradedAt: string
+  equity: number
+  pnl: number
+  pair: string
+  result: TradeResult
+}
+
+export interface DrawdownPoint {
+  tradeIndex: number
+  tradedAt: string
+  drawdown: number
+  drawdownPct: number
+  equity: number
+}
+
+export interface DrawdownPeriod {
+  startIndex: number
+  endIndex: number
+  startAt: string
+  endAt: string | null
+  peakEquity: number
+  troughEquity: number
+  maxDrawdownPct: number
+  tradesInDrawdown: number
+  recoveredAt: string | null
+}
+
+
+export interface PeriodPerformance {
+  period: string
+  periodType: 'daily' | 'weekly' | 'monthly'
+  trades: number
+  wins: number
+  losses: number
+  winRate: number
+  netPnl: number
+  profitFactor: number
+}
+
+export interface PairStat {
+  pair: string
+  trades: number
+  wins: number
+  losses: number
+  winRate: number
+  netPnl: number
+  avgRR: number
+  profitFactor: number
+  expectancy: number
+}
+
+export interface SessionStat {
+  session: TradingSession
+  trades: number
+  wins: number
+  losses: number
+  winRate: number
+  netPnl: number
+  profitFactor: number
+  avgRR: number
+}
+
+export interface IctSetupStat {
+  setupType: string
+  trades: number
+  wins: number
+  losses: number
+  winRate: number
+  netPnl: number
+  avgRR: number
+}
+
+export interface MlAccuracyMetrics {
+  totalPredictions: number
+  correctPredictions: number
+  accuracyRate: number
+  avgMlScore: number
+  avgConfidence: number
+}
+
+export interface AiDecisionMetrics {
+  totalDecisions: number
+  entryDecisions: number
+  entryWins: number
+  entryWinRate: number
+  watchDecisions: number
+  waitDecisions: number
+  ignoreDecisions: number
+  avgConfluenceScore: number
+}
+
+export interface BacktestReport {
+  runId: string
+  config: BacktestConfig
+  engineVersions: {
+    rulesEngine: string
+    decisionEngine: string
+    mlEngine: string
+  }
+  totalTrades: number
+  winningTrades: number
+  losingTrades: number
+  breakevenTrades: number
+  winRate: number
+  lossRate: number
+  profitFactor: number
+  expectancy: number
+  avgRR: number
+  netPnl: number
+  grossProfit: number
+  grossLoss: number
+  maxDrawdown: number
+  maxDrawdownPct: number
+  sharpeRatio: number | null
+  equityCurve: EquityPoint[]
+  drawdownCurve: DrawdownPoint[]
+  dailyPerformance: PeriodPerformance[]
+  weeklyPerformance: PeriodPerformance[]
+  monthlyPerformance: PeriodPerformance[]
+  pairStats: PairStat[]
+  sessionStats: SessionStat[]
+  ictSetupStats: IctSetupStat[]
+  mlAccuracy: MlAccuracyMetrics
+  aiDecisionMetrics: AiDecisionMetrics
+  monteCarlo?: MonteCarloResult
+  walkForward?: WalkForwardResult
+  generatedAt: string
   durationMs: number
 }
