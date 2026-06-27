@@ -1,6 +1,25 @@
-import React from 'react'
+'use client'
+
+import React, { useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 export default function SocialLoginSection() {
+  const [googleLoading, setGoogleLoading] = useState(false)
+
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true)
+    const supabase = createClient()
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+    // No need to reset loading — browser will navigate away on success.
+    // Reset on failure only:
+    setGoogleLoading(false)
+  }
+
   return (
     <div className="space-y-4">
       <div className="relative flex items-center justify-center">
@@ -14,11 +33,13 @@ export default function SocialLoginSection() {
 
       <div className="grid grid-cols-3 gap-3">
         <button
+          id="google-signin-btn"
           type="button"
-          disabled
-          className="flex items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.02] py-2 text-xs font-semibold text-slate-400 opacity-60 cursor-not-allowed"
+          onClick={handleGoogleSignIn}
+          disabled={googleLoading}
+          className="flex items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.02] py-2 text-xs font-semibold text-slate-300 transition-colors hover:bg-white/[0.06] hover:border-white/[0.15] hover:text-white cursor-pointer disabled:opacity-60 disabled:cursor-wait"
         >
-          Google
+          {googleLoading ? '...' : 'Google'}
         </button>
         <button
           type="button"
