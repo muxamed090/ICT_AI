@@ -198,4 +198,35 @@ export const orderExecutionSchema = z.object({
   take_profit: z.number().positive(),
 })
 
-
+// 15. Telegram Send Notification Validator
+export const telegramSendSchema = z.object({
+  eventType: z.enum([
+    'buy_signal', 'sell_signal', 'order_executed', 'order_filled',
+    'stop_loss_hit', 'take_profit_hit', 'risk_warning', 'emergency_stop',
+    'broker_offline', 'ml_high_confidence', 'ai_decision', 'economic_event',
+    'daily_summary', 'weekly_summary', 'test',
+  ]),
+  payload: z.union([
+    z.object({
+      pair: z.string().min(1),
+      entry: z.number(),
+      stopLoss: z.number(),
+      takeProfit: z.number(),
+      risk: z.number(),
+      confidence: z.number(),
+    }),
+    z.object({
+      pair: z.string().min(1),
+      direction: z.enum(['buy', 'sell']),
+      executedPrice: z.number(),
+      lotSize: z.number(),
+    }),
+    z.object({
+      totalTrades: z.number(),
+      winRate: z.number(),
+      netPnl: z.number(),
+      profitFactor: z.number(),
+    }),
+    z.string(),
+  ]).optional(),
+})

@@ -295,6 +295,16 @@ export interface Database {
         Insert: Omit<BrokerLog, 'id' | 'broker_account_id' | 'log_level' | 'created_at'> & Partial<Pick<BrokerLog, 'id' | 'broker_account_id' | 'log_level' | 'created_at'>>
         Update: Partial<BrokerLog>
       }
+      notification_logs: {
+        Row: NotificationLog
+        Insert: Omit<NotificationLog, 'id' | 'created_at' | 'chat_id' | 'error_message' | 'telegram_msg_id'> & Partial<Pick<NotificationLog, 'id' | 'created_at' | 'chat_id' | 'error_message' | 'telegram_msg_id'>>
+        Update: Partial<NotificationLog>
+      }
+      notification_queue: {
+        Row: NotificationQueueItem
+        Insert: Omit<NotificationQueueItem, 'id' | 'status' | 'retry_count' | 'max_retries' | 'next_retry_at' | 'last_error' | 'created_at' | 'updated_at'> & Partial<Pick<NotificationQueueItem, 'id' | 'status' | 'retry_count' | 'max_retries' | 'next_retry_at' | 'last_error' | 'created_at' | 'updated_at'>>
+        Update: Partial<NotificationQueueItem>
+      }
     }
   }
 }
@@ -916,4 +926,94 @@ export interface ExecutionReceipt {
   rejectionReason: string | null
   latencyMs: number
 }
+
+// ==================================================
+// Phase 13 — Telegram Notification System Types
+// ==================================================
+
+export type NotificationLogStatus = 'sent' | 'failed' | 'skipped'
+export type NotificationQueueStatus = 'pending' | 'processing' | 'failed'
+
+export interface NotificationLog {
+  id: string
+  user_id: string
+  event_type: string
+  channel: string
+  chat_id: string | null
+  message_text: string
+  status: NotificationLogStatus
+  error_message: string | null
+  telegram_msg_id: number | null
+  created_at: string
+}
+
+export interface NotificationQueueItem {
+  id: string
+  user_id: string
+  event_type: string
+  channel: string
+  chat_id: string
+  message_text: string
+  status: NotificationQueueStatus
+  retry_count: number
+  max_retries: number
+  next_retry_at: string
+  last_error: string | null
+  created_at: string
+  updated_at: string
+}
+
+// Telegram notification event types
+export type TelegramEventType =
+  | 'buy_signal'
+  | 'sell_signal'
+  | 'order_executed'
+  | 'order_filled'
+  | 'stop_loss_hit'
+  | 'take_profit_hit'
+  | 'risk_warning'
+  | 'emergency_stop'
+  | 'broker_offline'
+  | 'ml_high_confidence'
+  | 'ai_decision'
+  | 'economic_event'
+  | 'daily_summary'
+  | 'weekly_summary'
+  | 'test'
+
+// Payload shapes for Telegram message templates
+export interface TelegramSignalPayload {
+  pair: string
+  entry: number
+  stopLoss: number
+  takeProfit: number
+  risk: number
+  confidence: number
+}
+
+export interface TelegramOrderPayload {
+  pair: string
+  direction: OrderDirection
+  executedPrice: number
+  lotSize: number
+}
+
+export interface TelegramSummaryPayload {
+  totalTrades: number
+  winRate: number
+  netPnl: number
+  profitFactor: number
+}
+
+export interface TelegramStatusResult {
+  botConfigured: boolean
+  chatIdConfigured: boolean
+  telegramEnabled: boolean
+  todayMessageCount: number
+  pendingQueueCount: number
+  failedQueueCount: number
+  lastMessageAt: string | null
+}
+
+
 
