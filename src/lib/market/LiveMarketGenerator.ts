@@ -21,36 +21,31 @@ const SYMBOL_MAP: Record<string, string> = {
 
 export class LiveMarketGenerator {
 
-    private readonly state: Map<string, MarketData> = new Map()
-
-    private apiKey = process.env.MARKET_API_KEY
-
-
-    constructor() {
-
-        if (!this.apiKey) {
-            throw new Error(
-                'MARKET_API_KEY missing in environment'
-            )
-        }
-
-    }
-
+    private state = new Map<string, MarketData>()
 
 
     async tick(): Promise<void> {
+
+
+        const apiKey = process.env.NEXT_PUBLIC_MARKET_API_KEY
+
+
+        if (!apiKey) {
+            console.error("API KEY missing")
+            return
+        }
 
 
         const requests = SYMBOLS.map(async (symbol) => {
 
 
             const url =
-                `https://api.twelvedata.com/quote?symbol=${symbol}&apikey=${this.apiKey}`
+                `https://api.twelvedata.com/quote?symbol=${symbol}&apikey=${apiKey}`
 
 
-            const response = await fetch(url)
+            const res = await fetch(url)
 
-            const data = await response.json()
+            const data = await res.json()
 
 
             if (!data.close) return
@@ -58,12 +53,10 @@ export class LiveMarketGenerator {
 
             const price = Number(data.close)
 
-            const mappedSymbol = SYMBOL_MAP[symbol]
-
 
             const market: MarketData = {
 
-                symbol: mappedSymbol,
+                symbol: SYMBOL_MAP[symbol],
 
                 bid: price,
 
@@ -81,28 +74,26 @@ export class LiveMarketGenerator {
 
                 volume: Number(data.volume ?? 0),
 
-                timeframe: 'LIVE',
+                timeframe: "LIVE",
 
                 lastUpdate: new Date().toISOString(),
 
-
                 trend:
                     price > Number(data.open)
-                        ? 'up'
+                        ? "up"
                         : price < Number(data.open)
-                            ? 'down'
-                            : 'neutral',
+                            ? "down"
+                            : "neutral",
 
+                volatility: "medium",
 
-                volatility: 'medium',
-
-                status: 'open',
+                status: "open"
 
             }
 
 
             this.state.set(
-                mappedSymbol,
+                SYMBOL_MAP[symbol],
                 market
             )
 
@@ -112,34 +103,16 @@ export class LiveMarketGenerator {
 
         await Promise.all(requests)
 
-    }
-
-
-
-    getAllData(): MarketData[] {
-
-        return Array.from(
-            this.state.values()
-        )
 
     }
 
 
 
-    getDataForSymbol(symbol: string) {
+    getAllData() {
 
-        return this.state.get(symbol)
-
-    }
-
-
-
-    getSymbols() {
-
-        return Array.from(
-            this.state.keys()
-        )
+        return Array.from(this.state.values())
 
     }
+
 
 }
