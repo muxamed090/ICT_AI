@@ -9,11 +9,13 @@ import { AiDecisionRepository } from '@/lib/repositories/AiDecisionRepository'
 import { SignalRepository } from '@/lib/repositories/SignalRepository'
 import { MlModelRegistryRepository } from '@/lib/repositories/MlModelRegistryRepository'
 import { MlPredictionRepository } from '@/lib/repositories/MlPredictionRepository'
+import { TelegramRepository } from '@/lib/repositories/TelegramRepository'
+import { TelegramService } from '@/lib/services/TelegramService'
 import { AiDecisionEngine } from '@/lib/services/AiDecisionEngine'
 import { MlFeatureExtractor } from '@/lib/services/MlFeatureExtractor'
 import { marketSnapshotSchema } from '@/lib/validators/validators'
 import { ActionResult } from '@/lib/services/types'
-import { HybridDecisionResult, MarketSnapshot, AiDecision } from '@/types/database'
+import { HybridDecisionResult, MarketSnapshot, AiDecision, TelegramEventType, TelegramSignalPayload } from '@/types/database'
 import { handleActionError } from '@/lib/services/errorHandler'
 
 /**
@@ -142,6 +144,27 @@ export async function saveDecisionAndGenerateSignalAction(
         status: 'active',
       })
       signalGenerated = true
+
+      // 3.1 Send Telegram notification if enabled
+      const settingsRepo = new SettingsRepository(supabase)
+      const settings = await settingsRepo.getById(user.id)
+      if (settings?.telegram_enabled) {
+        const telegramRepo = new TelegramRepository(supabase)
+        const telegramService = new TelegramService(telegramRepo, settingsRepo)
+
+        const eventType: TelegramEventType = decisionResult.marketBias === 'bullish' ? 'buy_signal' : 'sell_signal'
+        const payload: TelegramSignalPayload = {
+          pair: validatedSnapshot.pair,
+          entry: decisionResult.positionCalculation.entryPrice,
+          stopLoss: decisionResult.positionCalculation.stopLossPrice,
+          takeProfit: decisionResult.positionCalculation.tp1,
+          risk: settings.risk_percent,
+          confidence: decisionResult.confidence,
+        }
+
+        const messageText = telegramService.buildMessage(eventType, payload)
+        await telegramService.send(user.id, eventType, messageText)
+      }
     }
 
     revalidatePath('/dashboard/decision-engine')
