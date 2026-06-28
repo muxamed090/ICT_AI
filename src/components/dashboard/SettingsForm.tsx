@@ -3,6 +3,7 @@
 import React, { useState, useTransition } from 'react'
 import { Save, Loader2 } from 'lucide-react'
 import { updateSettings } from '@/actions/settingsActions'
+import { testTelegramAction } from '@/actions/telegramActions'
 import { UserSettings } from '@/types/database'
 
 interface SettingsFormProps {
@@ -32,7 +33,21 @@ export default function SettingsForm({ settings }: SettingsFormProps) {
   const [telegramEnabled, setTelegramEnabled] = useState(settings.telegram_enabled)
   const [telegramChatId, setTelegramChatId] = useState(settings.telegram_chat_id ?? '')
   const [isPending, startTransition] = useTransition()
+  const [isTestingPending, startTestingTransition] = useTransition()
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  function handleSendTestNotification(e: React.MouseEvent) {
+    e.preventDefault()
+    setFeedback(null)
+    startTestingTransition(async () => {
+      const result = await testTelegramAction()
+      if (result.success) {
+        setFeedback({ type: 'success', message: 'Test notification sent successfully.' })
+      } else {
+        setFeedback({ type: 'error', message: result.error?.message ?? 'Failed to send test notification.' })
+      }
+    })
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -243,7 +258,16 @@ export default function SettingsForm({ settings }: SettingsFormProps) {
           <div className="space-y-1.5 max-w-sm">
             <label className={labelClass}>Telegram Chat ID</label>
             <input type="text" value={telegramChatId} onChange={(e) => setTelegramChatId(e.target.value)} className={inputClass} placeholder="Enter Telegram chat ID" />
-            <p className="text-[9px] text-slate-600">Found via @userinfobot on Telegram.</p>
+            <p className="text-[9px] text-slate-600 mb-2">Found via @userinfobot on Telegram.</p>
+            <button
+              type="button"
+              disabled={isTestingPending}
+              onClick={handleSendTestNotification}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600/20 border border-blue-500/30 text-blue-400 text-xs font-bold hover:bg-blue-600/30 transition-all disabled:opacity-40"
+            >
+              {isTestingPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+              {isTestingPending ? 'Sending...' : 'Send Test Notification'}
+            </button>
           </div>
         )}
       </div>

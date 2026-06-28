@@ -126,3 +126,11 @@ export async function getTelegramLogs(limit = 50): Promise<ActionResult<Notifica
     return handleActionError<NotificationLog[]>(err)
   }
 }
+
+/**
+ * Wrapper/alias to satisfy User Request: testTelegramAction.
+ */
+export async function testTelegramAction(): Promise<ActionResult<NotificationLog>> {
+  return sendTelegramTest()
+}
+
