@@ -5,6 +5,7 @@ import { Signal } from '@/types/database'
 import PageTitle from '@/components/widgets/PageTitle'
 import StatCard from '@/components/widgets/StatCard'
 import SignalsPanel from '@/components/dashboard/SignalsPanel'
+import { GET } from '@/app/api/signals/generate/route'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,22 +39,16 @@ export default async function SignalsPage() {
 
   let generated: GeneratedSignal[] = []
   let upcomingHighNews: UpcomingNews[] = []
-  let fetchDebug: Record<string, unknown> = {}
 
   try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://ict-ai-rouge.vercel.app'}/api/signals/generate`,
-      { cache: 'no-store' }
-    )
-    fetchDebug = { status: res.status, ok: res.ok }
-    if (res.ok) {
-      const data = await res.json()
-      generated = data.signals ?? []
-      upcomingHighNews = data.upcomingHighNews ?? []
-      fetchDebug = { ...fetchDebug, signalsLen: generated.length }
-    }
+
+    const res = await GET()
+    const data = await res.json()
+    generated = data.signals ?? []
+    upcomingHighNews = data.upcomingHighNews ?? []
   } catch (err) {
-    fetchDebug = { error: String(err) }
+    console.error('Signal fetch error:', err)
+    generated = []
   }
 
   const signals: Signal[] = generated.map((s, i) => ({
@@ -83,10 +78,6 @@ export default async function SignalsPage() {
         title="Signal Intelligence"
         subtitle="AI-generated trade signals with score, confidence, and entry-level parameters."
       />
-
-      <pre className="text-[10px] text-slate-400 bg-slate-950/40 p-3 rounded">
-        {JSON.stringify(fetchDebug)}
-      </pre>
 
       {upcomingHighNews.length > 0 && (
         <div className="glass-panel rounded-xl border border-rose-500/20 bg-rose-500/5 p-4 space-y-2">
