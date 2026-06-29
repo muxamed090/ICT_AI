@@ -1,7 +1,7 @@
 import React from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { EconomicEventsRepository } from '@/lib/repositories/EconomicEventsRepository'
+import { EconomicEvent } from '@/types/database'
 import PageTitle from '@/components/widgets/PageTitle'
 import EconomicCalendarPanel from '@/components/dashboard/EconomicCalendarPanel'
 import NewsWarningBanner from '@/components/news/NewsWarningBanner'
@@ -15,8 +15,16 @@ export default async function EconomicCalendarPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const economicRepo = new EconomicEventsRepository(supabase)
-  const events = await economicRepo.getAll()
+  let events: EconomicEvent[] = []
+  try {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL?.replace('supabase.co', 'vercel.app') ?? ''}/api/economic-calendar`,
+      { cache: 'no-store' }
+    )
+    if (res.ok) events = await res.json()
+  } catch {
+    events = []
+  }
 
   const highCount = events.filter((e) => e.impact === 'high').length
   const mediumCount = events.filter((e) => e.impact === 'medium').length
@@ -31,7 +39,6 @@ export default async function EconomicCalendarPage() {
         subtitle="Scheduled fundamental events that may impact market structure and liquidity."
       />
 
-      {/* News Trading Status */}
       <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
         <div className="flex-1 min-w-[240px]">
           <NewsWarningBanner events={events} />
@@ -40,7 +47,6 @@ export default async function EconomicCalendarPage() {
         <NewsCountdown events={events} />
       </div>
 
-      {/* Summary Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: 'Total Events', value: events.length, color: 'text-white' },
@@ -55,7 +61,6 @@ export default async function EconomicCalendarPage() {
         ))}
       </div>
 
-      {/* Impact legend */}
       <div className="flex flex-wrap gap-3 text-[10px] font-mono">
         <span className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-rose-400" /> HIGH: {highCount}
@@ -68,7 +73,6 @@ export default async function EconomicCalendarPage() {
         </span>
       </div>
 
-      {/* Main Calendar */}
       <div className="glass-panel rounded-xl border border-white/[0.04] bg-slate-950/20 p-5">
         <EconomicCalendarPanel events={events} />
       </div>
