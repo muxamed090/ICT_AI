@@ -44,17 +44,23 @@ export async function GET() {
     // 2. Fetch live prices
     const symbols = 'EUR/USD,GBP/USD,USD/JPY,EUR/JPY,XAU/USD,BTC/USD,AUD/USD,USD/CAD,USD/CHF,NZD/USD'
     let quotes: MarketQuote[] = []
+    let priceDebug: Record<string, unknown> = {}
     if (apiKey) {
         try {
             const priceRes = await fetch(
                 `https://api.twelvedata.com/quote?symbol=${encodeURIComponent(symbols)}&apikey=${apiKey}`,
                 { cache: 'no-store' }
             )
+            const raw = await priceRes.json()
+            priceDebug = { status: priceRes.status, ok: priceRes.ok, rawSample: raw }
             if (priceRes.ok) {
-                const raw = await priceRes.json()
                 quotes = Array.isArray(raw) ? raw : Object.values(raw)
             }
-        } catch { quotes = [] }
+        } catch (err) {
+            priceDebug = { error: String(err) }
+        }
+    } else {
+        priceDebug = { error: 'no api key' }
     }
 
     // 3. Check upcoming high-impact news (next 60 min)
@@ -125,8 +131,8 @@ export async function GET() {
         debug: {
             hasApiKey: !!apiKey,
             quotesCount: quotes.length,
-            rawQuotesSample: quotes.slice(0, 2),
             newsCount: newsEvents.length,
+            priceDebug,
         },
         upcomingHighNews: upcomingHigh.map((e) => ({
             title: e.title,
