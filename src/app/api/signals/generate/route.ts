@@ -50,7 +50,7 @@ export async function GET() {
         try {
             const priceRes = await fetch(
                 `https://api.twelvedata.com/quote?symbol=${encodeURIComponent(symbols)}&apikey=${apiKey}`,
-                { cache: 'no-store' }
+                { next: { revalidate: 30 } }
             )
             const raw = await priceRes.json()
             priceDebug = { status: priceRes.status, ok: priceRes.ok, rawSample: raw }
