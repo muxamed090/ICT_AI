@@ -7,6 +7,10 @@ const SYMBOL_MAP: Record<string, string> = {
     'EUR/JPY': 'EURJPY',
     'XAU/USD': 'XAUUSD',
     'BTC/USD': 'BTCUSD',
+    'AUD/USD': 'AUDUSD',
+    'USD/CAD': 'USDCAD',
+    'USD/CHF': 'USDCHF',
+    'NZD/USD': 'NZDUSD',
 }
 
 export class LiveMarketGenerator {
@@ -14,7 +18,8 @@ export class LiveMarketGenerator {
     private state = new Map<string, MarketData>()
 
     async tick(): Promise<void> {
-        const res = await fetch('/api/market')
+        const symbols = Object.keys(SYMBOL_MAP).join(',')
+        const res = await fetch(`/api/market?symbols=${encodeURIComponent(symbols)}`)
         const dataArr = await res.json()
 
         dataArr.forEach((data: Record<string, string>) => {
