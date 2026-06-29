@@ -18,10 +18,22 @@ export default async function EconomicCalendarPage() {
   let events: EconomicEvent[] = []
   try {
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL?.replace('supabase.co', 'vercel.app') ?? ''}/api/economic-calendar`,
+      'https://nfs.faireconomy.media/ff_calendar_thisweek.json',
       { cache: 'no-store' }
     )
-    if (res.ok) events = await res.json()
+    if (res.ok) {
+      const raw = await res.json()
+      events = raw.map((e: Record<string, string>, i: number) => ({
+        id: `ff-${i}`,
+        event_name: e.title ?? e.name ?? 'Unknown Event',
+        currency: e.country ?? '',
+        event_time: e.date ?? new Date().toISOString(),
+        impact: e.impact?.toLowerCase() === 'high' ? 'high' : e.impact?.toLowerCase() === 'medium' ? 'medium' : 'low',
+        forecast: e.forecast ?? null,
+        previous: e.previous ?? null,
+        actual: e.actual ?? null,
+      }))
+    }
   } catch {
     events = []
   }
