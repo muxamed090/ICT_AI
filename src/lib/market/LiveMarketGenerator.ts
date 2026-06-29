@@ -27,7 +27,7 @@ export class LiveMarketGenerator {
     async tick(): Promise<void> {
 
 
-        const apiKey = process.env.NEXT_PUBLIC_MARKET_API_KEY
+        const apiKey = process.env.MARKET_API_KEY
 
 
         if (!apiKey) {
