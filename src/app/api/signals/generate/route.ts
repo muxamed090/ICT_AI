@@ -122,6 +122,12 @@ export async function GET() {
 
     return NextResponse.json({
         signals,
+        debug: {
+            hasApiKey: !!apiKey,
+            quotesCount: quotes.length,
+            rawQuotesSample: quotes.slice(0, 2),
+            newsCount: newsEvents.length,
+        },
         upcomingHighNews: upcomingHigh.map((e) => ({
             title: e.title,
             country: e.country,
