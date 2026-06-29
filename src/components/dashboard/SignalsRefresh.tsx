@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
-export default function SignalsRefresh({ intervalSeconds = 30 }: { intervalSeconds?: number }) {
+export default function SignalsRefresh({ intervalSeconds = 15 }: { intervalSeconds?: number }) {
     const router = useRouter()
 
     useEffect(() => {
