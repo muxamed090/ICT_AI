@@ -6,11 +6,9 @@ const CURRENCY_MAP: Record<string, string[]> = {
     GBP: ['GBPUSD'],
     JPY: ['USDJPY', 'EURJPY'],
     XAU: ['XAUUSD'],
-    BTC: ['BTCUSD'],
     AUD: ['AUDUSD'],
     CAD: ['USDCAD'],
     NZD: ['NZDUSD'],
-    CHF: ['USDCHF'],
 }
 
 interface NewsEvent {
