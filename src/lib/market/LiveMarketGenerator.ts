@@ -26,7 +26,7 @@ export class LiveMarketGenerator {
         const res = await fetch('/api/market')
         const dataArr = await res.json()
 
-        dataArr.forEach((data: any) => {
+        dataArr.forEach((data: Record<string, string>) => {
             if (!data.close || !data.symbol) return
             const price = Number(data.close)
             const mapped = SYMBOL_MAP[data.symbol]
