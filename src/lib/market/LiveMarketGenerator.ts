@@ -18,101 +18,41 @@ const SYMBOL_MAP: Record<string, string> = {
     'BTC/USD': 'BTCUSD',
 }
 
-
 export class LiveMarketGenerator {
 
     private state = new Map<string, MarketData>()
 
-
     async tick(): Promise<void> {
+        const res = await fetch('/api/market')
+        const dataArr = await res.json()
 
-
-        const apiKey = process.env.MARKET_API_KEY
-
-
-        if (!apiKey) {
-            console.error("API KEY missing")
-            return
-        }
-
-
-        const requests = SYMBOLS.map(async (symbol) => {
-
-
-            const url =
-                `https://api.twelvedata.com/quote?symbol=${symbol}&apikey=${apiKey}`
-
-
-            const res = await fetch(url)
-
-            const data = await res.json()
-
-
-            if (!data.close) return
-
-
+        dataArr.forEach((data: any) => {
+            if (!data.close || !data.symbol) return
             const price = Number(data.close)
+            const mapped = SYMBOL_MAP[data.symbol]
+            if (!mapped) return
 
-
-            const market: MarketData = {
-
-                symbol: SYMBOL_MAP[symbol],
-
+            this.state.set(mapped, {
+                symbol: mapped,
                 bid: price,
-
                 ask: price,
-
                 spread: 0,
-
                 open: Number(data.open),
-
                 high: Number(data.high),
-
                 low: Number(data.low),
-
                 close: price,
-
                 volume: Number(data.volume ?? 0),
-
-                timeframe: "LIVE",
-
+                timeframe: 'LIVE',
                 lastUpdate: new Date().toISOString(),
-
-                trend:
-                    price > Number(data.open)
-                        ? "up"
-                        : price < Number(data.open)
-                            ? "down"
-                            : "neutral",
-
-                volatility: "medium",
-
-                status: "open"
-
-            }
-
-
-            this.state.set(
-                SYMBOL_MAP[symbol],
-                market
-            )
-
-
+                trend: price > Number(data.open) ? 'up' : price < Number(data.open) ? 'down' : 'neutral',
+                volatility: 'medium',
+                status: 'open',
+            })
         })
-
-
-        await Promise.all(requests)
-
-
     }
-
-
 
     getAllData() {
-
         return Array.from(this.state.values())
-
     }
-
 
 }
