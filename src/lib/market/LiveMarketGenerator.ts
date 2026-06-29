@@ -1,14 +1,5 @@
 import { MarketData } from './MarketDataTypes'
 
-const SYMBOLS = [
-    'EUR/USD',
-    'GBP/USD',
-    'USD/JPY',
-    'EUR/JPY',
-    'XAU/USD',
-    'BTC/USD',
-]
-
 const SYMBOL_MAP: Record<string, string> = {
     'EUR/USD': 'EURUSD',
     'GBP/USD': 'GBPUSD',
@@ -54,5 +45,4 @@ export class LiveMarketGenerator {
     getAllData() {
         return Array.from(this.state.values())
     }
-
 }
