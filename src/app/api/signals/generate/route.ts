@@ -129,12 +129,6 @@ export async function GET() {
 
     return NextResponse.json({
         signals,
-        debug: {
-            hasApiKey: !!apiKey,
-            quotesCount: quotes.length,
-            newsCount: newsEvents.length,
-            priceDebug,
-        },
         upcomingHighNews: upcomingHigh.map((e) => ({
             title: e.title,
             country: e.country,
