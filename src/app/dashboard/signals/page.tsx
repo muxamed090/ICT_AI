@@ -51,21 +51,23 @@ export default async function SignalsPage() {
     generated = []
   }
 
-  const signals: Signal[] = generated.map((s, i) => ({
+  const signals = generated.map((s, i) => ({
     id: `live-${i}`,
     user_id: user.id,
     pair: s.pair,
     direction: s.direction,
+    entry: s.entry,
     entry_price: s.entry,
     stop_loss: s.stop_loss,
+    tp1: s.tp1,
+    tp2: s.tp2,
     take_profit_1: s.tp1,
     take_profit_2: s.tp2,
     score: s.score,
     confidence: s.confidence,
-    status: s.recommendation === 'ENTRY' ? 'active' : 'pending',
+    status: (s.recommendation === 'ENTRY' ? 'active' : 'pending') as 'active' | 'pending' | 'completed' | 'expired',
     created_at: new Date().toISOString(),
-  })) as unknown as Signal[]
-
+  }))
   const totalSignals = signals.length
   const activeCount = generated.filter((s) => s.recommendation === 'ENTRY').length
   const pendingCount = generated.filter((s) => s.recommendation === 'WATCH' || s.recommendation === 'WAIT').length
