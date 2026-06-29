@@ -38,8 +38,8 @@ export default async function SignalsPage() {
 
   let generated: GeneratedSignal[] = []
   let upcomingHighNews: UpcomingNews[] = []
-
   let fetchDebug: Record<string, unknown> = {}
+
   try {
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://ict-ai-rouge.vercel.app'}/api/signals/generate`,
@@ -56,7 +56,6 @@ export default async function SignalsPage() {
     fetchDebug = { error: String(err) }
   }
 
-  // Map generated signals into Signal-shaped objects for SignalsPanel
   const signals: Signal[] = generated.map((s, i) => ({
     id: `live-${i}`,
     user_id: user.id,
@@ -68,7 +67,7 @@ export default async function SignalsPage() {
     take_profit_2: s.tp2,
     score: s.score,
     confidence: s.confidence,
-    status: s.recommendation === 'ENTRY' ? 'active' : s.recommendation === 'WATCH' ? 'pending' : 'pending',
+    status: s.recommendation === 'ENTRY' ? 'active' : 'pending',
     created_at: new Date().toISOString(),
   })) as unknown as Signal[]
 
@@ -85,7 +84,9 @@ export default async function SignalsPage() {
         subtitle="AI-generated trade signals with score, confidence, and entry-level parameters."
       />
 
-      <pre className="text-[10px] text-slate-400 bg-slate-950/40 p-3 rounded">{JSON.stringify(fetchDebug)}</pre>
+      <pre className="text-[10px] text-slate-400 bg-slate-950/40 p-3 rounded">
+        {JSON.stringify(fetchDebug)}
+      </pre>
 
       {upcomingHighNews.length > 0 && (
         <div className="glass-panel rounded-xl border border-rose-500/20 bg-rose-500/5 p-4 space-y-2">
