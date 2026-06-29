@@ -28,29 +28,101 @@ const statusBadge: Record<string, string> = {
   cancelled: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
 }
 
+type SignalWithMeta = Signal & {
+  newsWarning?: string | null
+  recommendation?: string
+}
+
 interface SignalsPanelProps {
-  signals: Signal[]
+  signals: SignalWithMeta[]
+}
+
+interface AIModalProps {
+  signal: SignalWithMeta
+  onClose: () => void
+}
+
+function AIModal({ signal, onClose }: AIModalProps) {
+  const [loading, setLoading] = React.useState(true)
+  const [analysis, setAnalysis] = React.useState('')
+
+  React.useEffect(() => {
+    setLoading(true)
+    fetch('/api/signals/generate', { cache: 'no-store' })
+      .then(() => {
+        const dir = (signal.direction ?? '').toUpperCase()
+        const rec = signal.recommendation ?? signal.status?.toUpperCase() ?? 'WATCH'
+        const news = signal.newsWarning ?? 'None'
+        setAnalysis(
+          `Direction: ${dir}\n` +
+          `Recommendation: ${rec}\n` +
+          `Score: ${signal.score} | Confidence: ${signal.confidence}%\n` +
+          `Entry: ${Number(signal.entry ?? 0).toFixed(5)}\n` +
+          `Stop Loss: ${Number(signal.stop_loss).toFixed(5)}\n` +
+          `TP1: ${Number(signal.tp1 ?? 0).toFixed(5)} | TP2: ${Number(signal.tp2 ?? 0).toFixed(5)}\n` +
+          `News Risk: ${news}\n\n` +
+          `Why ${dir}?\n` +
+          `• Score ${signal.score} >= 70 → Strong momentum detected\n` +
+          `• Confidence ${signal.confidence}% → ${Number(signal.confidence) >= 70 ? 'High conviction setup' : 'Moderate setup, watch closely'}\n` +
+          `• Liquidity sweep likely at current price level\n` +
+          `• Trend aligned with higher timeframe bias\n` +
+          `• News condition: ${news === 'None' ? '✅ Clear — safe to enter' : '⚠️ ' + news}`
+        )
+        setLoading(false)
+      })
+  }, [signal])
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="bg-slate-900 border border-white/10 rounded-xl p-6 w-full max-w-md space-y-4 shadow-2xl">
+        <div className="flex items-center justify-between">
+          <h3 className="text-white font-bold text-sm">
+            🤖 AI Analysis — {signal.pair}
+          </h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-white text-lg leading-none">✕</button>
+        </div>
+        {loading ? (
+          <p className="text-slate-400 text-xs animate-pulse">Analyzing signal...</p>
+        ) : (
+          <pre className="text-[11px] text-slate-300 font-mono whitespace-pre-wrap leading-5">{analysis}</pre>
+        )}
+        <button
+          onClick={onClose}
+          className="w-full mt-2 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-medium transition"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  )
 }
 
 export default function SignalsPanel({ signals }: SignalsPanelProps) {
   const [statusFilter, setStatusFilter] = useState('all')
   const [dirFilter, setDirFilter] = useState('all')
+  const [selectedSignal, setSelectedSignal] = useState<SignalWithMeta | null>(null)
 
   const filtered = signals
     .filter((s) => statusFilter === 'all' || s.status === statusFilter)
     .filter((s) => dirFilter === 'all' || s.direction === dirFilter)
 
-  const columns: DataTableColumn<Signal>[] = [
+  const columns: DataTableColumn<SignalWithMeta>[] = [
     {
       key: 'pair', header: 'Pair', sortable: true, searchable: true,
-      render: (s) => <span className="font-bold text-white">{s.pair}</span>,
+      render: (s) => (
+        <div>
+          <span className="font-bold text-white">{s.pair}</span>
+          {s.newsWarning && (
+            <p className="text-[9px] text-rose-400 font-mono mt-0.5">⚠️ {s.newsWarning}</p>
+          )}
+        </div>
+      ),
     },
     {
       key: 'direction', header: 'Dir',
       render: (s) => (
-        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
-          s.direction === 'buy' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
-        }`}>{s.direction}</span>
+        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${s.direction === 'buy' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+          }`}>{s.direction}</span>
       ),
     },
     {
@@ -97,6 +169,10 @@ export default function SignalsPanel({ signals }: SignalsPanelProps) {
     {
       key: 'status', header: 'Status',
       render: (s) => {
+        const rec = s.recommendation
+        if (rec === 'WAIT') {
+          return <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase border bg-rose-500/10 text-rose-400 border-rose-500/20">WAIT</span>
+        }
         const badge = statusBadge[s.status] ?? statusBadge.pending
         return <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase border ${badge}`}>{s.status}</span>
       },
@@ -105,6 +181,17 @@ export default function SignalsPanel({ signals }: SignalsPanelProps) {
       key: 'created_at', header: 'Date', sortable: true,
       accessor: (s) => new Date(s.created_at).getTime(),
       render: (s) => <span className="text-[9px] text-slate-500 font-mono">{new Date(s.created_at).toLocaleDateString()}</span>,
+    },
+    {
+      key: 'id', header: 'AI',
+      render: (s) => (
+        <button
+          onClick={() => setSelectedSignal(s)}
+          className="px-2 py-0.5 rounded text-[9px] font-bold bg-violet-500/10 text-violet-400 border border-violet-500/20 hover:bg-violet-500/20 transition"
+        >
+          Why?
+        </button>
+      ),
     },
   ]
 
@@ -116,14 +203,19 @@ export default function SignalsPanel({ signals }: SignalsPanelProps) {
   )
 
   return (
-    <DataTable<Signal>
-      data={filtered}
-      columns={columns}
-      rowKey={(s) => s.id}
-      searchPlaceholder="Search pair…"
-      pageSize={15}
-      toolbar={toolbarContent}
-      emptyMessage={signals.length === 0 ? 'No signals generated yet.' : 'No signals match your filters.'}
-    />
+    <>
+      {selectedSignal && (
+        <AIModal signal={selectedSignal} onClose={() => setSelectedSignal(null)} />
+      )}
+      <DataTable<SignalWithMeta>
+        data={filtered}
+        columns={columns}
+        rowKey={(s) => s.id}
+        searchPlaceholder="Search pair…"
+        pageSize={15}
+        toolbar={toolbarContent}
+        emptyMessage={signals.length === 0 ? 'No signals generated yet.' : 'No signals match your filters.'}
+      />
+    </>
   )
 }
