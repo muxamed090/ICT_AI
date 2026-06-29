@@ -6,9 +6,11 @@ const CURRENCY_MAP: Record<string, string[]> = {
     GBP: ['GBPUSD'],
     JPY: ['USDJPY', 'EURJPY'],
     XAU: ['XAUUSD'],
+    BTC: ['BTCUSD'],
     AUD: ['AUDUSD'],
     CAD: ['USDCAD'],
     NZD: ['NZDUSD'],
+    CHF: ['USDCHF'],
 }
 
 interface NewsEvent {
@@ -40,7 +42,8 @@ export async function GET() {
     } catch { newsEvents = [] }
 
     // 2. Fetch live prices
-    const symbols = 'EUR/USD,GBP/USD,USD/JPY,EUR/JPY,XAU/USD,BTC/USD,AUD/USD,USD/CAD,USD/CHF,NZD/USD'
+    // 2. Fetch live prices
+    const symbols = 'EUR/USD,XAU/USD,USD/CAD,EUR/JPY'
     let quotes: MarketQuote[] = []
     let priceDebug: Record<string, unknown> = {}
     if (apiKey) {
