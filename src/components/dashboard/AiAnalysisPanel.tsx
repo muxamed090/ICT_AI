@@ -1,159 +1,125 @@
-"use client"
+'use client'
 
 import React, { useState } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
-import { AiAnalysis } from '@/types/database'
-import SearchBar from '@/components/common/SearchBar'
-import FilterDropdown from '@/components/common/FilterDropdown'
+import { EngineOutput } from '@/lib/engine/types'
 
-const BIAS_OPTIONS = [
-  { value: 'all', label: 'All Bias' },
-  { value: 'bullish', label: 'Bullish' },
-  { value: 'bearish', label: 'Bearish' },
-  { value: 'neutral', label: 'Neutral' },
-]
-
-const KZ_OPTIONS = [
-  { value: 'all', label: 'All Killzones' },
-  { value: 'asia', label: 'Asia' },
-  { value: 'london', label: 'London' },
-  { value: 'new_york', label: 'New York' },
-  { value: 'none', label: 'None' },
-]
-
-const biasBadge: Record<string, string> = {
-  bullish: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  bearish: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
-  neutral: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+const recColor: Record<string, string> = {
+  'STRONG BUY': 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+  'BUY': 'text-emerald-300 bg-emerald-500/5  border-emerald-500/10',
+  'STRONG SELL': 'text-rose-400   bg-rose-500/10    border-rose-500/20',
+  'SELL': 'text-rose-300   bg-rose-500/5     border-rose-500/10',
+  'WAIT': 'text-amber-400  bg-amber-500/10   border-amber-500/20',
+  'NO TRADE': 'text-slate-400  bg-slate-500/10   border-slate-500/20',
 }
 
-interface AiAnalysisPanelProps {
-  analyses: AiAnalysis[]
+const riskColor: Record<string, string> = {
+  Low: 'text-emerald-400',
+  Medium: 'text-amber-400',
+  High: 'text-rose-400',
 }
 
-function StructureIndicator({ label, active }: { label: string; active: boolean }) {
-  return (
-    <span className={`text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border ${
-      active
-        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-        : 'bg-white/[0.02] text-slate-600 border-white/[0.04]'
-    }`}>
-      {label} {active ? '✓' : '✗'}
-    </span>
-  )
-}
-
-export default function AiAnalysisPanel({ analyses }: AiAnalysisPanelProps) {
-  const [search, setSearch] = useState('')
-  const [biasFilter, setBiasFilter] = useState('all')
-  const [kzFilter, setKzFilter] = useState('all')
-  const [expandedId, setExpandedId] = useState<string | null>(null)
-
-  const filtered = analyses
-    .filter((a) => a.pair.toLowerCase().includes(search.toLowerCase()))
-    .filter((a) => biasFilter === 'all' || a.market_bias === biasFilter)
-    .filter((a) => kzFilter === 'all' || a.killzone === kzFilter)
+export default function AIAnalysisPanel({ analyses }: { analyses: EngineOutput[] }) {
+  const [selected, setSelected] = useState<EngineOutput | null>(analyses[0] ?? null)
 
   return (
-    <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <SearchBar value={search} onChange={setSearch} placeholder="Search pair…" className="flex-1 min-w-[160px]" />
-        <FilterDropdown label="Bias" options={BIAS_OPTIONS} value={biasFilter} onChange={setBiasFilter} />
-        <FilterDropdown label="Killzone" options={KZ_OPTIONS} value={kzFilter} onChange={setKzFilter} />
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Left: Signal list */}
+      <div className="space-y-2">
+        {analyses.map((a) => (
+          <button
+            key={a.pair}
+            onClick={() => setSelected(a)}
+            className={`w-full text-left px-4 py-3 rounded-xl border transition ${selected?.pair === a.pair
+                ? 'border-violet-500/40 bg-violet-500/10'
+                : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'
+              }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-white text-sm">{a.pair}</span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${recColor[a.recommendation] ?? ''}`}>
+                {a.recommendation}
+              </span>
+            </div>
+            <div className="flex gap-3 mt-1 text-[10px] text-slate-400">
+              <span>Conf: <b className="text-white">{a.confidence}%</b></span>
+              <span>R:R <b className="text-white">{a.riskRewardRatio}</b></span>
+              <span className={riskColor[a.risk]}>Risk: {a.risk}</span>
+            </div>
+          </button>
+        ))}
       </div>
 
-      {/* Cards */}
-      {filtered.length === 0 ? (
-        <div className="text-center py-12 text-slate-500 text-sm">
-          {analyses.length === 0 ? 'No AI analyses yet. The engine will populate this once active.' : 'No analyses match your filters.'}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {filtered.map((a) => {
-            const badge = biasBadge[a.market_bias] ?? biasBadge.neutral
-            const isExpanded = expandedId === a.id
+      {/* Right: Detail */}
+      {selected && (
+        <div className="lg:col-span-2 space-y-4">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-white font-bold text-lg">{selected.pair}</h2>
+              <p className="text-slate-400 text-xs">{selected.direction.toUpperCase()} · {selected.trend} · {selected.marketBias}</p>
+            </div>
+            <span className={`text-sm font-bold px-3 py-1 rounded-lg border ${recColor[selected.recommendation] ?? ''}`}>
+              {selected.recommendation}
+            </span>
+          </div>
 
-            return (
-              <div key={a.id} className="glass-panel rounded-xl border border-white/[0.04] bg-slate-950/20 p-4 space-y-3">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-white">{a.pair}</span>
-                    <span className="text-[9px] text-slate-500 font-mono">{a.timeframe}</span>
-                  </div>
-                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase border ${badge}`}>
-                    {a.market_bias}
-                  </span>
-                </div>
-
-                {/* ICT Structure */}
-                <div className="flex flex-wrap gap-1">
-                  <StructureIndicator label="BOS" active={a.bos} />
-                  <StructureIndicator label="CHoCH" active={a.choch} />
-                  <StructureIndicator label="OB" active={a.order_block_mitigated} />
-                  <StructureIndicator label="OTE" active={a.ote_zone_detected} />
-                  <StructureIndicator label="Liq↑" active={a.liquidity_sweep_high} />
-                  <StructureIndicator label="Liq↓" active={a.liquidity_sweep_low} />
-                  <span className={`text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border ${
-                    a.fvg_type !== 'none'
-                      ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-                      : 'bg-white/[0.02] text-slate-600 border-white/[0.04]'
-                  }`}>
-                    FVG {a.fvg_type.toUpperCase()}
-                  </span>
-                </div>
-
-                {/* Scores */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-[9px]">
-                    <span className="text-slate-500 font-bold uppercase">Confluence</span>
-                    <span className="text-white font-mono font-bold">{Number(a.confluence_score).toFixed(1)}</span>
-                  </div>
-                  <div className="h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${Math.min(100, Number(a.confluence_score))}%` }} />
-                  </div>
-                  <div className="flex items-center justify-between text-[9px]">
-                    <span className="text-slate-500 font-bold uppercase">Confidence</span>
-                    <span className="text-white font-mono font-bold">{Number(a.confidence).toFixed(1)}%</span>
-                  </div>
-                  <div className="h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
-                    <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${Math.min(100, Number(a.confidence))}%` }} />
-                  </div>
-                </div>
-
-                {/* Tags */}
-                <div className="flex items-center gap-2 text-[9px]">
-                  <span className="text-slate-500">Session: <span className="text-slate-300 font-semibold">{a.session.replace(/_/g, ' ')}</span></span>
-                  <span className="text-slate-500">KZ: <span className="text-slate-300 font-semibold">{a.killzone}</span></span>
-                  <span className="text-slate-600 ml-auto font-mono">{a.model_version}</span>
-                </div>
-
-                {/* Expandable explanation */}
-                <button
-                  onClick={() => setExpandedId(isExpanded ? null : a.id)}
-                  className="flex items-center gap-1 text-[9px] text-blue-400 hover:text-blue-300 transition-colors font-semibold"
-                >
-                  {isExpanded ? 'Hide' : 'Show'} Explanation
-                  {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                </button>
-                {isExpanded && (
-                  <div className="text-[10px] text-slate-400 leading-relaxed bg-white/[0.02] rounded-lg p-3 border border-white/[0.04]">
-                    {a.explanation}
-                  </div>
-                )}
-
-                {/* Footer */}
-                <div className="text-[9px] text-slate-600 font-mono text-right">
-                  {new Date(a.created_at).toLocaleString()}
-                </div>
+          {/* Stats grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { label: 'Confidence', value: selected.confidence + '%' },
+              { label: 'Risk', value: selected.risk, cls: riskColor[selected.risk] },
+              { label: 'Momentum', value: selected.momentum },
+              { label: 'Entry Quality', value: selected.entryQuality },
+            ].map((item) => (
+              <div key={item.label} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider">{item.label}</p>
+                <p className={`text-sm font-bold mt-1 ${item.cls ?? 'text-white'}`}>{item.value}</p>
               </div>
-            )
-          })}
+            ))}
+          </div>
+
+          {/* Price levels */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { label: 'Entry', value: selected.entry.toFixed(5), cls: 'text-white' },
+              { label: 'Stop Loss', value: selected.stop_loss.toFixed(5), cls: 'text-rose-400' },
+              { label: 'TP1', value: selected.tp1.toFixed(5), cls: 'text-emerald-400' },
+              { label: 'TP2', value: selected.tp2.toFixed(5), cls: 'text-emerald-400' },
+            ].map((item) => (
+              <div key={item.label} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider">{item.label}</p>
+                <p className={`text-xs font-mono font-bold mt-1 ${item.cls}`}>{item.value}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Reasons */}
+          {selected.reasons.length > 0 && (
+            <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 space-y-1">
+              <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">✅ Reasons</p>
+              {selected.reasons.map((r, i) => (
+                <p key={i} className="text-xs text-slate-300 font-mono">• {r}</p>
+              ))}
+            </div>
+          )}
+
+          {/* Warnings */}
+          {selected.warnings.length > 0 && (
+            <div className="bg-rose-500/5 border border-rose-500/20 rounded-xl p-4 space-y-1">
+              <p className="text-[10px] text-rose-400 uppercase tracking-wider mb-2">⚠️ Warnings</p>
+              {selected.warnings.map((w, i) => (
+                <p key={i} className="text-xs text-rose-300 font-mono">• {w}</p>
+              ))}
+            </div>
+          )}
+
+          {/* Trade summary */}
+          <div className="bg-violet-500/5 border border-violet-500/20 rounded-xl p-4">
+            <p className="text-[10px] text-violet-400 uppercase tracking-wider mb-2">📋 Trade Summary</p>
+            <p className="text-xs text-slate-300 font-mono leading-5">{selected.tradeSummary}</p>
+          </div>
         </div>
       )}
-
-      <p className="text-[9px] text-slate-600 font-mono">{analyses.length} analys{analyses.length !== 1 ? 'es' : 'is'} total</p>
     </div>
   )
 }
