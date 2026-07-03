@@ -42,10 +42,8 @@ export async function GET() {
     } catch { newsEvents = [] }
 
     // 2. Fetch live prices
-    // 2. Fetch live prices
     const symbols = 'EUR/USD,XAU/USD,USD/CAD,EUR/JPY'
     let quotes: MarketQuote[] = []
-    let priceDebug: Record<string, unknown> = {}
     if (apiKey) {
         try {
             const priceRes = await fetch(
@@ -53,15 +51,10 @@ export async function GET() {
                 { next: { revalidate: 30 } }
             )
             const raw = await priceRes.json()
-            priceDebug = { status: priceRes.status, ok: priceRes.ok, rawSample: raw }
             if (priceRes.ok) {
                 quotes = Array.isArray(raw) ? raw : Object.values(raw)
             }
-        } catch (err) {
-            priceDebug = { error: String(err) }
-        }
-    } else {
-        priceDebug = { error: 'no api key' }
+        } catch { quotes = [] }
     }
 
     // 3. Check upcoming high-impact news (next 60 min)
@@ -86,7 +79,6 @@ export async function GET() {
         const baseConfidence = Math.min(95, 50 + (priceDiff / open) * 10000)
         const baseScore = Math.min(95, 55 + (priceDiff / open) * 8000)
 
-        // Check if this pair has upcoming high news
         const affectedCurrencies = upcomingHigh.map((e) => e.country?.toUpperCase())
         const hasNewsRisk = affectedCurrencies.some((currency) =>
             (CURRENCY_MAP[currency] ?? []).includes(displaySymbol)
@@ -96,7 +88,6 @@ export async function GET() {
             (CURRENCY_MAP[e.country?.toUpperCase()] ?? []).includes(displaySymbol)
         )
 
-        // Reduce confidence if news risk
         const confidence = hasNewsRisk ? Math.max(20, baseConfidence - 35) : baseConfidence
         const score = hasNewsRisk ? Math.max(20, baseScore - 30) : baseScore
         const recommendation = hasNewsRisk ? 'WAIT' : score >= 70 ? 'ENTRY' : score >= 55 ? 'WATCH' : 'WAIT'
@@ -122,7 +113,9 @@ export async function GET() {
             confidence: Math.round(confidence),
             recommendation,
             hasNewsRisk,
-            newsWarning: newsWarning ? `⚠️ ${newsWarning.title} (${newsWarning.country}) in ${Math.round((new Date(newsWarning.date).getTime() - now.getTime()) / 60000)} min` : null,
+            newsWarning: newsWarning
+                ? '⚠️ ' + newsWarning.title + ' (' + newsWarning.country + ') in ' + Math.round((new Date(newsWarning.date).getTime() - now.getTime()) / 60000) + ' min'
+                : null,
             trend: price > open ? 'up' : 'down',
         }
     }).filter(Boolean)

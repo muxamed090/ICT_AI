@@ -1,7 +1,6 @@
 import React from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Signal } from '@/types/database'
 import PageTitle from '@/components/widgets/PageTitle'
 import StatCard from '@/components/widgets/StatCard'
 import SignalsPanel from '@/components/dashboard/SignalsPanel'
