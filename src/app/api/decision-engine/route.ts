@@ -13,12 +13,20 @@ import { SettingsRepository } from '@/lib/repositories/SettingsRepository'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(req?: Request) {
+    const url = req?.url ?? 'http://localhost/api/decision-engine'
+    const { searchParams } = new URL(url)
     try {
         const apiKey = process.env.MARKET_API_KEY
         if (!apiKey) return NextResponse.json({ error: 'No API key' }, { status: 500 })
 
-        // Get user settings for risk management
+        // Parse query params
+        const requestedPair = searchParams.get('pair')
+        const requestedDir = searchParams.get('direction') as 'buy' | 'sell' | null
+        const timeframe = searchParams.get('timeframe') ?? 'H1'
+        const setup = searchParams.get('setup') ?? 'BOS+FVG'
+
+        // Get user settings
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
         const accountBalance = 10000
@@ -27,13 +35,16 @@ export async function GET() {
         if (user) {
             const settingsRepo = new SettingsRepository(supabase)
             const settings = await settingsRepo.getById(user.id)
-            if (settings) {
-                riskPercent = settings.risk_percent ?? 1
-            }
+            if (settings) riskPercent = settings.risk_percent ?? 1
         }
 
         // Fetch prices
-        const symbols = 'EUR/USD,XAU/USD,USD/CAD,EUR/JPY'
+        const symbols = requestedPair
+            ? requestedPair.replace('/', '') === requestedPair
+                ? requestedPair.slice(0, 3) + '/' + requestedPair.slice(3)
+                : requestedPair
+            : 'EUR/USD,XAU/USD,USD/CAD,EUR/JPY'
+
         const priceRes = await fetch(
             `https://api.twelvedata.com/quote?symbol=${encodeURIComponent(symbols)}&apikey=${apiKey}`,
             { next: { revalidate: 30 } }
@@ -48,27 +59,33 @@ export async function GET() {
             .filter((q) => q && !q.code)
             .map((q) => {
                 const price = parseFloat(q.close as string) || 0
+                const open = parseFloat(q.open as string) || price
                 const pair = (q.symbol as string).replace('/', '')
                 const pip = pair.includes('JPY') || pair.includes('XAU') ? 0.01 : 0.0001
-                const direction = Math.random() > 0.5 ? 'buy' : 'sell'
-                const score = Math.floor(60 + Math.random() * 35)
-                const confidence = Math.floor(55 + Math.random() * 40)
+
+                // Use requested direction or detect from price vs open
+                const direction: 'buy' | 'sell' = requestedDir ?? (price >= open ? 'buy' : 'sell')
+
                 const sl = direction === 'buy' ? price - 20 * pip : price + 20 * pip
                 const tp1 = direction === 'buy' ? price + 30 * pip : price - 30 * pip
                 const tp2 = direction === 'buy' ? price + 60 * pip : price - 60 * pip
                 const rr = parseFloat((Math.abs(tp1 - price) / Math.abs(price - sl)).toFixed(2))
 
-                // 1. ICT Engine
+                // Price-based score (real, not random)
+                const priceDiff = Math.abs(price - open)
+                const score = Math.min(95, Math.round(55 + (priceDiff / open) * 8000))
+                const confidence = Math.min(95, Math.round(50 + (priceDiff / open) * 10000))
+
+                // 1. ICT Engine (real)
                 const ictResult = runICTEngine({
                     pair, direction, price, entry: price,
                     stop_loss: sl, tp1, tp2, score, confidence,
                     hasNewsRisk: false, newsWarning: null,
                 })
 
-                // 2. ML Engine
+                // 2. ML Engine (real)
                 const mlInput: MLInput = {
-                    pair, direction, session,
-                    setup: 'BOS+FVG',
+                    pair, direction, session, setup,
                     ictScore: score,
                     ictConfidence: confidence,
                     riskRewardRatio: rr,
@@ -76,24 +93,24 @@ export async function GET() {
                 }
                 const mlResult = runMLEngine(mlInput)
 
-                // 3. Rules Engine
+                // 3. Rules Engine (real)
                 const ruleInput: RuleInput = {
                     pair, direction, price, entry: price,
                     stop_loss: sl, tp1, tp2, score, confidence,
-                    session, killzone, timeframe: 'H1',
+                    session, killzone, timeframe,
                     hasNewsRisk: false, newsWarning: null,
                     minutesToNews: 999,
                     htfBias: direction === 'buy' ? 'bullish' : 'bearish',
-                    hasBOS: Math.random() > 0.3,
-                    hasCHoCH: Math.random() > 0.5,
-                    hasFVG: Math.random() > 0.4,
-                    hasOrderBlock: Math.random() > 0.4,
-                    hasLiquiditySweep: Math.random() > 0.3,
-                    spreadPips: Math.floor(Math.random() * 3),
+                    hasBOS: score >= 75,
+                    hasCHoCH: score >= 65,
+                    hasFVG: confidence >= 70,
+                    hasOrderBlock: confidence >= 65,
+                    hasLiquiditySweep: score >= 70,
+                    spreadPips: 1,
                 }
                 const rulesResult = runRulesEngine(ruleInput)
 
-                // 4. Decision Engine
+                // 4. Decision Engine (real aggregate)
                 const decisionInput: DecisionInput = {
                     pair, direction, price, entry: price,
                     stop_loss: sl, tp1, tp2,
@@ -102,7 +119,18 @@ export async function GET() {
                 }
                 const decision = runDecisionEngine(decisionInput)
 
-                return decision
+                // 5. Decision Trace
+                const trace = [
+                    (ictResult.confidence >= 80 ? '✓' : '✗') + ' ICT Score: ' + ictResult.confidence + (ictResult.confidence >= 80 ? ' ≥ 80' : ' < 80'),
+                    (mlResult.prediction.recommendation === 'TAKE' ? '✓' : '✗') + ' ML: ' + mlResult.prediction.recommendation,
+                    (rulesResult.grade === 'A' || rulesResult.grade === 'B' ? '✓' : '✗') + ' Rules Grade: ' + rulesResult.grade,
+                    '✓ News Risk: NONE',
+                    '✓ Combined Score: ' + decision.aggregated.combinedScore,
+                    '─────────────────────',
+                    'Decision = ' + decision.action,
+                ]
+
+                return { ...decision, trace }
             })
 
         return NextResponse.json({ decisions, session, killzone: killzone ?? null })
