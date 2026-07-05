@@ -43,6 +43,14 @@ export interface PerformanceStats {
     profitFactor: number
 }
 
+export interface ConfidenceComponents {
+    trend: number
+    momentum: number
+    history: number
+    risk: number
+    liquidity: number
+}
+
 export interface MLPrediction {
     expectedWinRate: number
     expectedRR: number
@@ -51,6 +59,7 @@ export interface MLPrediction {
     patternScore: number
     recommendation: 'TAKE' | 'SKIP' | 'WATCH'
     reasons: string[]
+    components?: ConfidenceComponents
 }
 
 export interface MLInput {

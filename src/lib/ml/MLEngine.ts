@@ -68,6 +68,7 @@ export function runMLEngine(input: MLInput): MLOutput {
         adjustedConfidence: adaptiveResult.finalConfidence,
         prediction: {
             ...prediction,
+            components: adaptiveResult.components,
             reasons: [
                 ...prediction.reasons,
                 '',
