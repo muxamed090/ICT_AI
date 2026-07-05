@@ -21,7 +21,7 @@ export async function GET() {
         // Get user settings for risk management
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
-        let accountBalance = 10000
+        const accountBalance = 10000
         let riskPercent = 1
 
         if (user) {
