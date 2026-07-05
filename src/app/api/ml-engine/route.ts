@@ -19,7 +19,7 @@ export async function GET() {
         const { data: { user } } = await supabase.auth.getUser()
 
         // Get real patterns from Supabase (if user logged in)
-        let supabasePatterns: Record<string, { winRate: number; avgRR: number; total: number }> = {}
+        const supabasePatterns: Record<string, { winRate: number; avgRR: number; total: number }> = {}
         if (user) {
             const patternRepo = new MLPatternRepository(supabase)
             const tradeRepo = new MLTradeRepository(supabase)
