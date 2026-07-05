@@ -18,7 +18,7 @@ export default async function DecisionEnginePage() {
 
   try {
     const { GET } = await import('@/app/api/decision-engine/route')
-    const res = await GET()
+    const res = await GET(new Request('http://localhost/api/decision-engine'))
     const data = await res.json()
     decisions = Array.isArray(data.decisions) ? data.decisions : []
     session = data.session ?? 'london'

@@ -3,6 +3,10 @@
 import React, { useState } from 'react'
 import { DecisionOutput } from '@/lib/decision/types'
 
+interface DecisionWithTrace extends DecisionOutput {
+    trace?: string[]
+}
+
 const actionColor: Record<string, string> = {
     'BUY': 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
     'SELL': 'text-rose-400   bg-rose-500/10    border-rose-500/20',
@@ -29,12 +33,12 @@ export default function DecisionEnginePanel({
     session,
     killzone,
 }: {
-    decisions: DecisionOutput[]
+    decisions: DecisionWithTrace[]
     session: string
     killzone: string | null
 }) {
     const safe = Array.isArray(decisions) ? decisions : []
-    const [selected, setSelected] = useState<DecisionOutput | null>(safe[0] ?? null)
+    const [selected, setSelected] = useState<DecisionWithTrace | null>(safe[0] ?? null)
 
     if (safe.length === 0) {
         return <div className="text-center py-20 text-slate-500 text-sm">No decisions available.</div>
@@ -187,11 +191,26 @@ export default function DecisionEnginePanel({
                             </div>
                         </div>
 
-                        {/* Entry reason */}
+                        {/* Entry Optimization */}
                         <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-3">
                             <p className="text-[10px] text-blue-400 uppercase tracking-wider mb-1">🎯 Entry Optimization</p>
                             <p className="text-xs text-slate-300">{selected.entry.entryReason}</p>
                         </div>
+
+                        {/* Decision Trace */}
+                        {selected.trace && selected.trace.length > 0 && (
+                            <div className="bg-slate-950/40 border border-white/[0.06] rounded-xl p-4">
+                                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-3">🔍 Decision Trace</p>
+                                {selected.trace.map((line, i) => (
+                                    <p key={i} className={`text-xs font-mono leading-6 ${line.startsWith('✓') ? 'text-emerald-400' :
+                                            line.startsWith('✗') ? 'text-rose-400' :
+                                                line.startsWith('─') ? 'text-slate-600' :
+                                                    line.startsWith('Decision') ? 'text-white font-bold' :
+                                                        'text-slate-400'
+                                        }`}>{line}</p>
+                                ))}
+                            </div>
+                        )}
 
                         {/* Warnings */}
                         {selected.warnings.length > 0 && (
@@ -203,7 +222,7 @@ export default function DecisionEnginePanel({
                             </div>
                         )}
 
-                        {/* Summary */}
+                        {/* Decision Summary */}
                         <div className="bg-violet-500/5 border border-violet-500/20 rounded-xl p-4">
                             <p className="text-[10px] text-violet-400 uppercase tracking-wider mb-2">📋 Decision Summary</p>
                             <p className="text-xs text-slate-300 font-mono leading-5">{selected.summary}</p>
