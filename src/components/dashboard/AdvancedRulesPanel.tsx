@@ -89,8 +89,8 @@ export default function RulesEnginePanel({
               key={r.pair}
               onClick={() => setSelected(r)}
               className={`w-full text-left px-4 py-3 rounded-xl border transition ${selected?.pair === r.pair
-                  ? 'border-violet-500/40 bg-violet-500/10'
-                  : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'
+                ? 'border-violet-500/40 bg-violet-500/10'
+                : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'
                 }`}
             >
               <div className="flex items-center justify-between">
@@ -112,8 +112,8 @@ export default function RulesEnginePanel({
               <div className="mt-2 h-1 bg-white/[0.05] rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full ${r.rulesResult.grade === 'A' ? 'bg-emerald-500' :
-                      r.rulesResult.grade === 'B' ? 'bg-blue-500' :
-                        r.rulesResult.grade === 'C' ? 'bg-amber-500' : 'bg-rose-500'
+                    r.rulesResult.grade === 'B' ? 'bg-blue-500' :
+                      r.rulesResult.grade === 'C' ? 'bg-amber-500' : 'bg-rose-500'
                     }`}
                   style={{ width: ((r.rulesResult.totalScore / r.rulesResult.maxScore) * 100) + '%' }}
                 />

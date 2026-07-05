@@ -2,7 +2,7 @@ import React from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import PageTitle from '@/components/widgets/PageTitle'
-import RulesEnginePanel from '@/components/dashboard/RulesEnginePanel'
+import AdvancedRulesPanel from '@/components/dashboard/AdvancedRulesPanel'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,7 +33,7 @@ export default async function RulesEnginePage() {
                 subtitle="ICT Premium Rules — Session, Killzone, News, Liquidity, Structure & Multi-Timeframe validation."
             />
             <div className="glass-panel rounded-xl border border-white/[0.04] bg-slate-950/20 p-5">
-                <RulesEnginePanel
+                <AdvancedRulesPanel
                     results={results as never}
                     session={session}
                     killzone={killzone}
