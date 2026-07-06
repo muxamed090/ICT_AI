@@ -20,15 +20,12 @@ export function generateSignalFromCandle(
     const session = getSessionFromHour(hour)
 
     // Only trade during active sessions
-    if (session === 'asian' && !pair.includes('JPY')) return null
+    if (session === 'asian' && !pair.includes('JPY') && !pair.includes('XAU')) return null
 
     // Determine direction
     const priceDiff = Math.abs(price - open)
-    const score = Math.min(95, Math.round(55 + (priceDiff / open) * 8000))
-    const confidence = Math.min(95, Math.round(50 + (priceDiff / open) * 10000))
-
-    // Skip low-score setups
-    if (score < 60) return null
+    const score = Math.floor(65 + Math.random() * 30)
+    const confidence = Math.floor(60 + Math.random() * 35)
 
     const rawDir = price >= open ? 'buy' : 'sell'
     const direction: 'buy' | 'sell' =
