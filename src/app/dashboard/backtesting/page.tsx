@@ -1,10 +1,9 @@
 import React from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { BacktestRunRepository } from '@/lib/repositories/BacktestRunRepository'
-import { TradeJournalRepository } from '@/lib/repositories/TradeJournalRepository'
 import PageTitle from '@/components/widgets/PageTitle'
-import BacktestConsole from '@/components/dashboard/BacktestConsole'
+import BacktestPanel from '@/components/dashboard/BacktestPanel'
+import { BacktestReport } from '@/lib/backtest/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,24 +12,26 @@ export default async function BacktestingPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const backtestRepo = new BacktestRunRepository(supabase)
-  const journalRepo = new TradeJournalRepository(supabase)
+  let initialReport: BacktestReport | null = null
 
-  const [runs, journalTrades] = await Promise.all([
-    backtestRepo.getSummaries(user.id),
-    journalRepo.getAll(user.id),
-  ])
-
-  const completedCount = journalTrades.filter((t) => t.result !== 'pending').length
+  try {
+    const { GET } = await import('@/app/api/backtest/route')
+    const res = await GET()
+    const data = await res.json()
+    initialReport = data.report ?? null
+  } catch (err) {
+    console.error('Backtest error:', err)
+  }
 
   return (
     <div className="space-y-6">
       <PageTitle
-        title="Backtesting Engine"
-        subtitle="Replay ICT AI Trader decisions against historical market journals to evaluate strategy performance, drawdown risks, and ML accuracy."
+        title="Backtesting"
+        subtitle="Test your ICT strategy on 30 days of historical data using real engines."
       />
-
-      <BacktestConsole initialRuns={runs} completedTradeCount={completedCount} />
+      <div className="glass-panel rounded-xl border border-white/[0.04] bg-slate-950/20 p-5">
+        <BacktestPanel initialReport={initialReport} />
+      </div>
     </div>
   )
 }
