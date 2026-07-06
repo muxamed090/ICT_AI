@@ -63,4 +63,12 @@ export interface BacktestReport {
     bestTrade: BacktestTrade | null
     worstTrade: BacktestTrade | null
     generatedAt: string
+    gradeDistribution?: Record<string, number>
+    scoreAnalysis?: {
+        high: { count: number; winRate: number }
+        mid: { count: number; winRate: number }
+        low: { count: number; winRate: number }
+    }
+    maxConsecutiveWins?: number
+    maxConsecutiveLosses?: number
 }
