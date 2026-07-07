@@ -7,7 +7,6 @@ export function generateHistoricalCandles(
     days: number
 ): Candle[] {
     const candles: Candle[] = []
-    const pip = pair.includes('JPY') || pair.includes('XAU') ? 0.01 : 0.0001
     const volatility = pair.includes('XAU') ? 2 : pair.includes('JPY') ? 0.3 : 0.001
 
     let price = basePrice

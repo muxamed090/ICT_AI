@@ -1,6 +1,5 @@
 import { ExecutionRequest, ExecutionResult, TradingState } from '../types'
 import { createOrder } from './OrderManager'
-import { orderToPosition } from './PositionTracker'
 import { checkRisk } from './RiskGuard'
 import { BrokerConnector } from './BrokerConnector'
 

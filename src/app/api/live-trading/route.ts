@@ -22,7 +22,7 @@ export async function GET() {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
         let riskPercent = 1
-        let accountBalance = 10000
+        const accountBalance = 10000
 
         if (user) {
             const settingsRepo = new SettingsRepository(supabase)
