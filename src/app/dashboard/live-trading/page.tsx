@@ -1,11 +1,8 @@
 import React from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { SettingsRepository } from '@/lib/repositories/SettingsRepository'
-import { BrokerAccountRepository } from '@/lib/repositories/BrokerAccountRepository'
-import { LiveTradingRepository } from '@/lib/repositories/LiveTradingRepository'
 import PageTitle from '@/components/widgets/PageTitle'
-import LiveTradingConsole from '@/components/dashboard/LiveTradingConsole'
+import LiveTradingPanel from '@/components/dashboard/LiveTradingPanel'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,58 +11,48 @@ export default async function LiveTradingPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const settingsRepo = new SettingsRepository(supabase)
-  const brokerRepo = new BrokerAccountRepository(supabase)
-  const liveRepo = new LiveTradingRepository(supabase)
+  let signals: unknown[] = []
+  let state = {
+    isConnected: false,
+    brokerType: 'demo',
+    accountBalance: 10000,
+    equity: 10000,
+    todayPnl: 0,
+    todayTrades: 0,
+    dailyDrawdown: 0,
+    maxDailyDrawdown: 5,
+    openPositions: [],
+    pendingOrders: [],
+  }
+  let session = 'london'
+  let killzone: string | null = null
 
-  let settings = await settingsRepo.getById(user.id)
-  if (!settings) {
-    settings = await settingsRepo.create({
-      id: user.id,
-      theme: 'dark',
-      timezone: 'UTC',
-      language: 'en',
-      notification_enabled: true,
-      telegram_enabled: false,
-      telegram_chat_id: null,
-      risk_percent: 1.0,
-      ai_learning_enabled: true,
-      ml_mode: 'hybrid',
-      signal_threshold: 7.00,
-      max_spread_allowed: 3.00,
-      daily_drawdown_limit: 5.00,
-      news_buffer_minutes: 30,
-      risk_profile: 'balanced',
-      ml_confidence_weight: 0.30,
-      ml_min_training_samples: 10,
-      ml_auto_retrain: true,
-    })
+  try {
+    const { GET } = await import('@/app/api/live-trading/route')
+    const res = await GET()
+    const data = await res.json()
+    signals = Array.isArray(data.signals) ? data.signals : []
+    state = data.state ?? state
+    session = data.session ?? 'london'
+    killzone = data.killzone ?? null
+  } catch (err) {
+    console.error('Live Trading error:', err)
   }
 
-  const [accounts, activeAccount, recentOrders, openPositions, recentLogs] = await Promise.all([
-    brokerRepo.getAll(user.id),
-    brokerRepo.getActive(user.id),
-    liveRepo.getRecentOrders(user.id, 30),
-    liveRepo.getOpenPositions(user.id),
-    liveRepo.getRecentLogs(user.id, 50),
-  ])
-
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="space-y-6">
       <PageTitle
         title="Live Trading"
-        subtitle="Manage broker connections, monitor positions, and control execution modes."
-        badge="Phase 12"
-        badgeColor="emerald"
+        subtitle="Real-time trade execution powered by ICT Engine + ML Engine + Rules Engine + Decision Engine."
       />
-      <LiveTradingConsole
-        settings={settings}
-        accounts={accounts}
-        activeAccount={activeAccount}
-        recentOrders={recentOrders}
-        openPositions={openPositions}
-        recentLogs={recentLogs}
-      />
+      <div className="glass-panel rounded-xl border border-white/[0.04] bg-slate-950/20 p-5">
+        <LiveTradingPanel
+          initialSignals={signals as never}
+          initialState={state as never}
+          session={session}
+          killzone={killzone}
+        />
+      </div>
     </div>
   )
 }
