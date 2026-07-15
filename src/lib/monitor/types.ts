@@ -33,8 +33,6 @@ export interface PerformanceMetrics {
     totalRequests: number
     errorRate: number
     uptime: number
-    lastError?: string
-    lastErrorTime?: string
 }
 
 export interface SystemHealth {

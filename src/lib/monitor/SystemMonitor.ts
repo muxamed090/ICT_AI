@@ -5,7 +5,6 @@ import { checkBroker } from './checks/BrokerCheck'
 import { checkPerformance } from './checks/PerformanceCheck'
 
 export async function runSystemCheck(apiKey: string, supabaseUrl: string): Promise<SystemHealth> {
-    // Run all checks in parallel
     const [
         ict, ml, rules, decision,
         twelveData, forexFactory, supabase,
@@ -32,11 +31,9 @@ export async function runSystemCheck(apiKey: string, supabaseUrl: string): Promi
 
     const performance = checkPerformance(responseTimes, 0, 100, Date.now())
 
-    // Overall health
     const allChecks = [ict, ml, rules, decision, twelveData, forexFactory, supabase]
     const hasError = allChecks.some((c) => c.status === 'error')
     const hasWarning = allChecks.some((c) => c.status === 'warning')
-
     const overall: StatusLevel = hasError ? 'error' : hasWarning ? 'warning' : 'healthy'
 
     return {
