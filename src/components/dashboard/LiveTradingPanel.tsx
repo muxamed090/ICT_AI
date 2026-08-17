@@ -94,9 +94,36 @@ export default function LiveTradingPanel({
     async function handleExecute(signal: LiveSignal) {
         if (!signal.tradePlan) return
         setExecuting(signal.pair)
-        await new Promise((r) => setTimeout(r, 800))
-        setExecuted((prev) => ({ ...prev, [signal.pair]: signal.action }))
-        setExecuting(null)
+        try {
+            await new Promise((r) => setTimeout(r, 800))
+            const plan = signal.tradePlan
+            const hour = new Date().getUTCHours()
+            const session = (hour >= 7 && hour < 9) ? 'overlap' : (hour >= 7 && hour < 16) ? 'london' : (hour >= 12 && hour < 21) ? 'new_york' : 'asian'
+            await fetch('/api/journal', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    pair: signal.pair,
+                    direction: signal.direction,
+                    timeframe: 'H1',
+                    session,
+                    setup_type: 'BOS+FVG',
+                    entry: plan.entry,
+                    stop_loss: plan.stopLoss,
+                    take_profit: plan.tp1,
+                    risk_reward: plan.rr ?? 1.5,
+                    result: 'pending',
+                    pnl: 0,
+                    notes: 'Auto-logged from Live Trading. Grade: ' + plan.grade + ' | Score: ' + plan.confidence,
+                    ai_confidence: plan.confidence,
+                }),
+            })
+            setExecuted((prev) => ({ ...prev, [signal.pair]: signal.action }))
+        } catch (err) {
+            console.error('Execute error:', err)
+        } finally {
+            setExecuting(null)
+        }
     }
 
     const executable = signals.filter((s) => s.action === 'BUY' || s.action === 'SELL')
@@ -169,8 +196,8 @@ export default function LiveTradingPanel({
                             key={s.pair}
                             onClick={() => setSelected(s)}
                             className={`w-full text-left px-4 py-3 rounded-xl border transition ${selected?.pair === s.pair
-                                    ? 'border-violet-500/40 bg-violet-500/10'
-                                    : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'
+                                ? 'border-violet-500/40 bg-violet-500/10'
+                                : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'
                                 }`}
                         >
                             <div className="flex items-center justify-between">
@@ -276,8 +303,8 @@ export default function LiveTradingPanel({
                                             onClick={() => handleExecute(selected)}
                                             disabled={executing === selected.pair}
                                             className={`w-full py-3 rounded-xl font-bold text-sm transition ${selected.action === 'BUY'
-                                                    ? 'bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-400'
-                                                    : 'bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-400'
+                                                ? 'bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-400'
+                                                : 'bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-400'
                                                 } disabled:opacity-50`}
                                         >
                                             {executing === selected.pair
