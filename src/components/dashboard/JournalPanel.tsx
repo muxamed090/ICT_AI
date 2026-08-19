@@ -75,7 +75,21 @@ export default function JournalPanel({ initialData }: { initialData: JournalData
     await refresh()
     setSelected(null)
   }
+  const [closeForm, setCloseForm] = useState<{ result: string; pnl: string; exitPrice: string } | null>(null)
 
+  async function handleCloseTrade(id: string, result: string, pnl: number) {
+    await fetch('/api/journal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'update',
+        id,
+        updates: { result, pnl },
+      }),
+    })
+    await refresh()
+    setCloseForm(null)
+  }
   async function handleReview(id: string) {
     setReviewLoading(true)
     try {
@@ -121,8 +135,8 @@ export default function JournalPanel({ initialData }: { initialData: JournalData
             key={t}
             onClick={() => setTab(t)}
             className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${tab === t
-                ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30'
-                : 'bg-white/[0.02] text-slate-400 border border-white/[0.06] hover:bg-white/[0.04]'
+              ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30'
+              : 'bg-white/[0.02] text-slate-400 border border-white/[0.06] hover:bg-white/[0.04]'
               }`}
           >
             {t === 'trades' ? '📋 Trades' : t === 'stats' ? '📊 Statistics' : '➕ Add Trade'}
@@ -149,8 +163,8 @@ export default function JournalPanel({ initialData }: { initialData: JournalData
                 key={t.id}
                 onClick={() => { setSelected(t); setReview(null) }}
                 className={`w-full text-left px-4 py-3 rounded-xl border transition ${selected?.id === t.id
-                    ? 'border-violet-500/40 bg-violet-500/10'
-                    : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'
+                  ? 'border-violet-500/40 bg-violet-500/10'
+                  : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'
                   }`}
               >
                 <div className="flex items-center justify-between">
@@ -201,6 +215,14 @@ export default function JournalPanel({ initialData }: { initialData: JournalData
                     🗑 Delete
                   </button>
                 </div>
+                {selected.result === 'pending' && (
+                  <button
+                    onClick={() => setCloseForm({ result: 'win', pnl: '', exitPrice: '' })}
+                    className="px-3 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold transition hover:bg-amber-500/20"
+                  >
+                    🔒 Close Trade
+                  </button>
+                )}
               </div>
 
               {/* Price levels */}
@@ -230,7 +252,60 @@ export default function JournalPanel({ initialData }: { initialData: JournalData
                   </div>
                 ))}
               </div>
-
+              {/* Close Trade Modal */}
+              {closeForm && selected && (
+                <div className="bg-slate-900/80 border border-white/10 rounded-xl p-4 space-y-3">
+                  <p className="text-[10px] text-amber-400 uppercase tracking-wider">🔒 Close Trade</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <p className="text-[10px] text-slate-500 mb-1">Result</p>
+                      <select
+                        value={closeForm.result}
+                        onChange={(e) => setCloseForm((f) => f ? { ...f, result: e.target.value } : null)}
+                        className="w-full bg-slate-900 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white"
+                      >
+                        <option value="win">WIN</option>
+                        <option value="loss">LOSS</option>
+                        <option value="breakeven">BREAKEVEN</option>
+                      </select>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-500 mb-1">P&L ($)</p>
+                      <input
+                        type="number"
+                        value={closeForm.pnl}
+                        onChange={(e) => setCloseForm((f) => f ? { ...f, pnl: e.target.value } : null)}
+                        className="w-full bg-slate-900 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white"
+                        placeholder="e.g. 150"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-500 mb-1">Exit Price</p>
+                      <input
+                        type="number"
+                        value={closeForm.exitPrice}
+                        onChange={(e) => setCloseForm((f) => f ? { ...f, exitPrice: e.target.value } : null)}
+                        className="w-full bg-slate-900 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white"
+                        placeholder="e.g. 1.14500"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleCloseTrade(selected.id!, closeForm.result, parseFloat(closeForm.pnl || '0'))}
+                      className="px-4 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition hover:bg-emerald-500/30"
+                    >
+                      ✅ Confirm Close
+                    </button>
+                    <button
+                      onClick={() => setCloseForm(null)}
+                      className="px-4 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-slate-400 text-xs transition hover:bg-white/[0.06]"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
               {/* Notes */}
               {selected.notes && (
                 <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
