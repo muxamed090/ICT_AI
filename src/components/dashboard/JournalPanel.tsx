@@ -313,7 +313,39 @@ export default function JournalPanel({ initialData }: { initialData: JournalData
                   <p className="text-xs text-slate-300">{selected.notes}</p>
                 </div>
               )}
-
+              {/* Screenshot */}
+              <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 space-y-3">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider">📸 Screenshot</p>
+                {selected.screenshot_url ? (
+                  <div className="space-y-2">
+                    <img
+                      src={selected.screenshot_url}
+                      alt="Trade screenshot"
+                      className="w-full rounded-lg border border-white/[0.06] max-h-64 object-cover"
+                    />
+                    <p className="text-[10px] text-slate-500">Screenshot uploaded</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-slate-500">No screenshot yet</p>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0]
+                        if (!file || !selected.id) return
+                        const fd = new FormData()
+                        fd.append('file', file)
+                        fd.append('tradeId', selected.id)
+                        const res = await fetch('/api/journal/screenshot', { method: 'POST', body: fd })
+                        const json = await res.json()
+                        if (json.url) await refresh()
+                      }}
+                      className="text-[10px] text-slate-400 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:bg-violet-500/10 file:text-violet-400 hover:file:bg-violet-500/20"
+                    />
+                  </div>
+                )}
+              </div>
               {/* AI Review */}
               {review && (
                 <div className="bg-violet-500/5 border border-violet-500/20 rounded-xl p-4 space-y-3">
