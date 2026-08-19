@@ -19,7 +19,7 @@ interface JournalData {
 
 export default function JournalPanel({ initialData }: { initialData: JournalData }) {
   const [data, setData] = useState<JournalData>(initialData)
-  const [tab, setTab] = useState<'trades' | 'stats' | 'add'>('trades')
+  const [tab, setTab] = useState<'trades' | 'stats' | 'performance' | 'add'>('trades')
   const [selected, setSelected] = useState<JournalEntry | null>(null)
   const [review, setReview] = useState<AIReview | null>(null)
   const [loading, setLoading] = useState(false)
@@ -130,7 +130,7 @@ export default function JournalPanel({ initialData }: { initialData: JournalData
 
       {/* Tabs */}
       <div className="flex gap-2 flex-wrap">
-        {(['trades', 'stats', 'add'] as const).map((t) => (
+        {(['trades', 'stats', 'performance', 'add'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -139,7 +139,7 @@ export default function JournalPanel({ initialData }: { initialData: JournalData
               : 'bg-white/[0.02] text-slate-400 border border-white/[0.06] hover:bg-white/[0.04]'
               }`}
           >
-            {t === 'trades' ? '📋 Trades' : t === 'stats' ? '📊 Statistics' : '➕ Add Trade'}
+            {t === 'trades' ? '📋 Trades' : t === 'stats' ? '📊 Statistics' : t === 'performance' ? '📈 Performance' : '➕ Add Trade'}
           </button>
         ))}
         <button
@@ -452,7 +452,113 @@ export default function JournalPanel({ initialData }: { initialData: JournalData
           )}
         </div>
       )}
+      {/* Performance Tab */}
+      {tab === 'performance' && (
+        <div className="space-y-6">
+          {/* Equity Curve */}
+          <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+            <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-3">📈 Equity Curve</p>
+            {data.trades.length === 0 ? (
+              <p className="text-slate-500 text-xs text-center py-8">No trades yet</p>
+            ) : (
+              <div className="h-32 flex items-end gap-0.5">
+                {(() => {
+                  let equity = 10000
+                  const points = data.trades
+                    .filter((t) => t.result !== 'pending')
+                    .map((t) => { equity += t.pnl; return equity })
+                  const min = Math.min(...points)
+                  const max = Math.max(...points)
+                  const range = max - min || 1
+                  return points.map((p, i) => (
+                    <div
+                      key={i}
+                      className={`flex-1 rounded-sm ${p >= 10000 ? 'bg-emerald-500/60' : 'bg-rose-500/60'}`}
+                      style={{ height: ((p - min) / range * 100) + '%' }}
+                      title={'$' + p.toFixed(2)}
+                    />
+                  ))
+                })()}
+              </div>
+            )}
+          </div>
 
+          {/* Key Metrics */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { label: 'Expectancy', value: '$' + (data.stats.avgWin * (data.stats.winRate / 100) - data.stats.avgLoss * (1 - data.stats.winRate / 100)).toFixed(2) },
+              { label: 'Avg Win', value: '+$' + data.stats.avgWin.toFixed(2) },
+              { label: 'Avg Loss', value: '-$' + data.stats.avgLoss.toFixed(2) },
+              { label: 'Profit Factor', value: data.stats.profitFactor.toString() },
+            ].map((item) => (
+              <div key={item.label} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider">{item.label}</p>
+                <p className="text-sm font-bold mt-1 text-white">{item.value}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Monthly P&L */}
+          <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+            <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-3">📅 Monthly P&L</p>
+            {data.trades.length === 0 ? (
+              <p className="text-slate-500 text-xs text-center py-4">No data yet</p>
+            ) : (
+              <div className="space-y-2">
+                {(() => {
+                  const monthly: Record<string, number> = {}
+                  data.trades.filter((t) => t.result !== 'pending' && t.created_at).forEach((t) => {
+                    const month = t.created_at!.slice(0, 7)
+                    monthly[month] = (monthly[month] ?? 0) + t.pnl
+                  })
+                  return Object.entries(monthly).sort().map(([month, pnl]) => (
+                    <div key={month} className="flex items-center gap-3">
+                      <span className="text-[10px] text-slate-400 w-20">{month}</span>
+                      <div className="flex-1 h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${pnl >= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`}
+                          style={{ width: Math.min(100, Math.abs(pnl) / 10) + '%' }}
+                        />
+                      </div>
+                      <span className={`text-[10px] font-bold w-16 text-right ${pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}
+                      </span>
+                    </div>
+                  ))
+                })()}
+              </div>
+            )}
+          </div>
+
+          {/* Best/Worst Session */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+              <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-3">🕐 Session Stats</p>
+              {data.sessionStats.map((s) => (
+                <div key={s.session} className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] text-slate-400 capitalize">{s.session}</span>
+                  <span className={`text-[10px] font-bold ${s.winRate >= 60 ? 'text-emerald-400' : s.winRate >= 45 ? 'text-amber-400' : 'text-rose-400'}`}>
+                    {s.winRate}% ({s.trades})
+                  </span>
+                </div>
+              ))}
+              {data.sessionStats.length === 0 && <p className="text-slate-500 text-xs">No data</p>}
+            </div>
+            <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+              <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-3">💱 Pair Stats</p>
+              {data.pairStats.map((p) => (
+                <div key={p.pair} className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] text-slate-400">{p.pair}</span>
+                  <span className={`text-[10px] font-bold ${p.winRate >= 60 ? 'text-emerald-400' : p.winRate >= 45 ? 'text-amber-400' : 'text-rose-400'}`}>
+                    {p.winRate}% | RR {p.avgRR}
+                  </span>
+                </div>
+              ))}
+              {data.pairStats.length === 0 && <p className="text-slate-500 text-xs">No data</p>}
+            </div>
+          </div>
+        </div>
+      )}
       {/* Add Trade Tab */}
       {tab === 'add' && (
         <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5 space-y-4">
